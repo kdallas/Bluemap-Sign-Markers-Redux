@@ -1,7 +1,9 @@
 
-## IMMC BlueMap Sign Markers
+## BlueMap Sign Markers Redux
 
-This plugin is a fork of [Easy BlueMap Sign Markers](https://github.com/deimiczny/easy-bmapmarkers), which itself is a fork of [BlueMapSignMarkers](https://modrinth.com/plugin/bluemapsignmarkers) 
+This plugin is a fork of [IMMC BlueMap Sign Markers](https://github.com/IMMC-dev/Bluemap-Sign-Markers) which forked [Easy BlueMap Sign Markers](https://github.com/deimiczny/easy-bmapmarkers), which itself is a fork of [BlueMapSignMarkers](https://modrinth.com/plugin/bluemapsignmarkers) 
+
+**IMMC-dev's readme below, until I have something to add.**
 
 This fork re-adds support for custom icons uploaded to the `/bluemap/web/markers/` directory, and removes the strict requirement to match the exact icons the plugin provides.
 
