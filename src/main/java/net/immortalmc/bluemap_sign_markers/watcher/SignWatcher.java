@@ -21,6 +21,8 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static net.immortalmc.bluemap_sign_markers.Constants.*;
 
@@ -95,7 +97,10 @@ public class SignWatcher implements Listener {
             BufferedImage image = ImageIO.read(iconFile);
             int width = image.getWidth();
             int height = image.getHeight();
-            anchor = new Vector2i(height / 2, width / 2);
+            // Vector2i is (x, y), so x takes the width and y the height. For the
+            // bundled 32x32 icons the two are equal and the order is invisible;
+            // a custom non-square icon would anchor off-centre if swapped.
+            anchor = new Vector2i(width / 2, height / 2);
         } catch (IOException e) {
             featureProvider.getLogger().warning(String.format("Something wrong with image %s, details: %s", iconFile.getPath(), e.getMessage()));
             return;
@@ -107,7 +112,12 @@ public class SignWatcher implements Listener {
         String label2 = readLine(event, 2);
         String label3 = readLine(event, 3);
 
-        String fullLabel = label1 + " " + label2 + " " + label3;
+        // Blank lines are dropped rather than concatenated, which would otherwise
+        // leave stray separators: a sign with only line 2 filled labelled as
+        // "text  " with two trailing spaces.
+        String fullLabel = Stream.of(label1, label2, label3)
+                .filter(part -> !part.isBlank())
+                .collect(Collectors.joining(" "));
 
         // ### No description - no marker
         if (fullLabel.isBlank()) return;

@@ -1,5 +1,6 @@
 package net.immortalmc.bluemap_sign_markers.helpers;
 
+import com.google.gson.stream.JsonWriter;
 import de.bluecolored.bluemap.api.BlueMapAPI;
 import de.bluecolored.bluemap.api.BlueMapMap;
 import de.bluecolored.bluemap.api.BlueMapWorld;
@@ -124,8 +125,25 @@ public class MarkerHelper {
     private void saveWorldMarkerSet(World world) {
         String name = MARKER_SET_PREFIX + world.getName() + JSON_FILENAME;
         File file = new File(plugin.getDataFolder(), name);
-        try (FileWriter writer = new FileWriter(file)) {
-            MarkerGson.INSTANCE.toJson(featureProvider.getMarkerSet().get(world), writer);
+        MarkerSet set = featureProvider.getMarkerSet().get(world);
+        // Writes indented JSON through an explicit JsonWriter rather than the
+        // Appendable overload, which emits everything on one line. Indentation is
+        // a writer setting: GsonBuilder.setPrettyPrinting() would hard-code two
+        // spaces, and four is what we want.
+        //
+        // Gson has no toJson(Object, JsonWriter) overload, so the source type is
+        // passed explicitly. The runtime class is what the Appendable overload
+        // passed internally, so the same adapter is selected and the output is
+        // unchanged apart from the whitespace.
+        try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
+            writer.setIndent("    ");
+            if (set == null) {
+                // Matches the Appendable overload, which writes JSON null rather
+                // than throwing when the world has no marker set yet.
+                writer.nullValue();
+            } else {
+                MarkerGson.INSTANCE.toJson(set, set.getClass(), writer);
+            }
         } catch (IOException ex) {
             logger.log(Level.WARNING, "Problem while saving marker files!", ex);
         }
