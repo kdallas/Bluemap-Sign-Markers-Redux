@@ -119,10 +119,13 @@ public class MarkerHelper {
     /**
      * Saves the marker set associated with the given world to a JSON file in the plugin data folder.
      * I/O exceptions are caught and logged as warnings.
+     * <p>
+     * Called after every marker change, so the file tracks the live state rather than only
+     * being written at shutdown, and once per world when the plugin is disabled.
      *
      * @param world the world for which the marker set is saved
      */
-    private void saveWorldMarkerSet(World world) {
+    public void saveWorldMarkerSet(World world) {
         String name = MARKER_SET_PREFIX + world.getName() + JSON_FILENAME;
         File file = new File(plugin.getDataFolder(), name);
         MarkerSet set = featureProvider.getMarkerSet().get(world);

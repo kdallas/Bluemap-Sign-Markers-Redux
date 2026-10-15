@@ -137,6 +137,9 @@ public class SignWatcher implements Listener {
         String markerDetails = buildMarkerContent(markerContent);
         POIMarker marker = POIMarker.builder().position(pos).label(fullLabel).icon(icon, anchor).maxDistance(100000).detail(markerDetails).build();
         featureProvider.getMarkerSet().get(block.getWorld()).put(id, marker);
+        // Persist immediately: the shutdown save only covers a clean stop, so without
+        // this an unclean shutdown would lose every marker created since the last one.
+        featureProvider.saveMarkerSet(block.getWorld());
 
         // ### Replace first line, with prefix, e.g. [map], to <marker> indicator
         event.line(0, LegacyComponentSerializer.legacySection().deserialize(MARKER_PLACEHOLDER));
@@ -165,6 +168,7 @@ public class SignWatcher implements Listener {
         Marker marker = set.get(id);
         if (marker == null) return;
         set.remove(id);
+        featureProvider.saveMarkerSet(block.getWorld());
 
         event.getPlayer().sendMessage(formatMessage(String.format(REMOVED_TEMPLATE, (int) pos.getX(), (int) pos.getY(), (int) pos.getZ())));
     }

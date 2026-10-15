@@ -47,4 +47,15 @@ public interface FeatureProvider {
      */
     Map<World, MarkerSet> getMarkerSet();
 
+    /**
+     * Persists the marker set for the given world to disk.
+     * <p>
+     * Called after each marker is added or removed so the saved file tracks the live state
+     * rather than only being written when the plugin is disabled. Without this a crash or
+     * an unclean shutdown loses every marker created since the last clean stop.
+     *
+     * @param world the world whose marker set should be saved
+     */
+    void saveMarkerSet(World world);
+
 }

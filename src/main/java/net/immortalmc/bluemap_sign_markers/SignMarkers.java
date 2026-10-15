@@ -130,4 +130,17 @@ public class SignMarkers extends JavaPlugin implements FeatureProvider {
     public Map<World, MarkerSet> getMarkerSet() {
         return this.markerSet;
     }
+
+    /**
+     * Persists the marker set for the given world.
+     * <p>
+     * Called by the sign watcher after each marker change so the saved file tracks the live
+     * state. Must run on the server thread, which is where sign events are dispatched.
+     *
+     * @param world the world whose marker set should be saved
+     */
+    @Override
+    public void saveMarkerSet(World world) {
+        markerHelper.saveWorldMarkerSet(world);
+    }
 }
