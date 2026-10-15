@@ -29,17 +29,22 @@ tasks.compileJava {
     options.encoding = Charsets.UTF_8.name()
 }
 
+// Resolved at configuration time; `project` must not be reached from the
+// per-file callback below, which runs at execution time.
+val pluginVersion = version.toString()
+val pluginName = name
+
 tasks.processResources {
     filteringCharset = "UTF-8"
     filesMatching(listOf("plugin.yml", "**/*.yml", "**/*.yaml", "**/*.properties", "**/*.txt", "**/*.md")) {
         expand(
             mapOf(
-                "version" to project.version,
-                "name" to project.name
+                "version" to pluginVersion,
+                "name" to pluginName
             )
         )
     }
-    inputs.property("version", project.version)
+    inputs.property("version", pluginVersion)
 }
 
 tasks.shadowJar {
