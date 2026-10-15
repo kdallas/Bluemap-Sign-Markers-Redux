@@ -40,6 +40,17 @@ public class SignMarkers extends JavaPlugin implements FeatureProvider {
     private MarkerHelper markerHelper;
 
     /**
+     * Whether the {@link SignWatcher} listener has been registered.
+     * <p>
+     * BlueMap re-fires its {@code onEnable} consumers every time it is reloaded, so
+     * registering unconditionally would add another listener per reload. Bukkit dispatches
+     * each sign event to every registered listener, so the player feedback would repeat
+     * once per accumulated reload. The listener itself survives a BlueMap reload, so it
+     * only ever needs registering once.
+     */
+    private boolean signWatcherRegistered = false;
+
+    /**
      * Concurrent map associating each loaded Bukkit {@link World} with its BlueMap {@link MarkerSet}.
      */
     private final Map<World, MarkerSet> markerSet = new ConcurrentHashMap<>();
@@ -66,7 +77,10 @@ public class SignMarkers extends JavaPlugin implements FeatureProvider {
                         JarFile jar = new JarFile(this.getFile());
                         webRoot = api.getWebApp().getWebRoot();
                         boolean result = IconHelper.copyMarkers(jar, webRoot, logger);
-                        Bukkit.getPluginManager().registerEvents(new SignWatcher(this), this);
+                        if (!signWatcherRegistered) {
+                            Bukkit.getPluginManager().registerEvents(new SignWatcher(this), this);
+                            signWatcherRegistered = true;
+                        }
                         logger.info("Plugin init status: " + (result ? "ok!" : "failed!"));
                     } catch (IOException e) {
                         logger.warning("Something crashed during init: " + e.getMessage());
