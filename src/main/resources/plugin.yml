@@ -1,4 +1,4 @@
-name: IMMCBluemapSignMarkers
+name: SignMarkersRedux
 version: ${version}
 main: net.immortalmc.bluemap_sign_markers.SignMarkers
 api-version: '${apiVersion}'

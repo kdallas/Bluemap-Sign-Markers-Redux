@@ -23,7 +23,7 @@ version = "1.0.1"
 /** One Minecraft/Paper build target: the complete set of per-target values. */
 data class McTarget(
     val id: String,
-    /** Jar-name suffix: BluemapSignMarkers-<version>-<jarSuffix>.jar */
+    /** Jar-name suffix: SignMarkersRedux-<version>-<jarSuffix>.jar */
     val jarSuffix: String,
     val paperApi: String,
     val bluemapApi: String,
@@ -126,7 +126,7 @@ tasks.processResources {
 
 tasks.shadowJar {
     // The target suffix becomes part of the file name:
-    // BluemapSignMarkers-1.0.1-mc1.21.jar, BluemapSignMarkers-1.0.1-mc26.3.jar
+    // SignMarkersRedux-1.0.1-mc1.21.jar, SignMarkersRedux-1.0.1-mc26.3.jar
     archiveClassifier.set(mcTarget.jarSuffix)
     mergeServiceFiles()
 

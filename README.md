@@ -18,8 +18,8 @@ No JDK 21 install is needed - the 1.21 build compiles with `--release 21` on JDK
 - `./gradlew build` - builds the 1.21.x target (paper-api 1.21.11, BlueMap API 2.7.7)
 - `./gradlew build -PmcTarget=26` - builds the 26.x target (paper-api 26.3, BlueMap API 2.8.1)
 
-Artifacts land in `build/libs` as `BluemapSignMarkers-<version>-mc1.21.jar` and
-`BluemapSignMarkers-<version>-mc26.3.jar`. They coexist, so run the two builds without
+Artifacts land in `build/libs` as `SignMarkersRedux-<version>-mc1.21.jar` and
+`SignMarkersRedux-<version>-mc26.3.jar`. They coexist, so run the two builds without
 `clean` between them if you want both. `clean` removes both.
 
 Everything that differs between the two targets lives in one table at the top of

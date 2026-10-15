@@ -48,7 +48,7 @@ public class Constants {
     /**
      * MiniMessage template used for player messages. Argument: marker text.
      */
-    public final static String MSG_PREFIX = "<red>[IMMC-SignMarkers]<red> <yellow>%s</yellow>";
+    public final static String MSG_PREFIX = "<red>[SignMarkersRedux]<red> <yellow>%s</yellow>";
     /**
      * HTML template used as the marker detail content. The first three string placeholders
      * are used for the three label lines. Subsequent placeholders are used for X, Y, Z,
