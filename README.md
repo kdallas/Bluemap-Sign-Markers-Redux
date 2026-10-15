@@ -3,11 +3,41 @@
 
 This plugin is a fork of [IMMC BlueMap Sign Markers](https://github.com/IMMC-dev/Bluemap-Sign-Markers) which forked [Easy BlueMap Sign Markers](https://github.com/deimiczny/easy-bmapmarkers), which itself is a fork of [BlueMapSignMarkers](https://modrinth.com/plugin/bluemapsignmarkers) 
 
-**IMMC-dev's readme below, until I have something to add.**
+### Changes in this fork
 
-This fork re-adds support for custom icons uploaded to the `/bluemap/web/markers/` directory, and removes the strict requirement to match the exact icons the plugin provides.
+- **Renamed to `SignMarkersRedux`**, including the in-game chat prefix. Upstream called the
+  plugin `IMMCBluemapSignMarkers`.
+- **Builds for two Paper targets from one branch** - Paper 1.21.x on Java 21 and Paper 26.x
+  on Java 25, with no second JDK needed for either. See [Building](#building).
+- **Sign API modernised** - `SignChangeEvent#getLine`/`#setLine` are deprecated in favour of
+  the Adventure `Component`-based `line(int)` accessors, which the plugin now uses.
+- **Build brought up to Gradle 9** - bumped the foojay toolchain resolver, regenerated the
+  wrapper, and removed an execution-time `project` reference that becomes an error in Gradle 10.
 
-Compatible with Paper. No other software compatibility (e.g. Fabric) is planned or will be accomodated since this is a bespoke fork for the Immortal MC server.
+### Inherited from upstream
+
+- **Custom icons** - any icon file present in `/bluemap/web/markers/` is used as-is, instead
+  of the plugin requiring one of its built-in names. This is the feature the fork chain added,
+  and the reason this fork exists.
+- **Paper and Folia support.** No other platform (e.g. Fabric) is planned.
+
+The usage instructions and icon list below come from the upstream readme and still apply.
+
+
+## Building
+
+Requires a JDK 25 toolchain (Gradle downloads one via the foojay resolver if absent).
+No JDK 21 install is needed - the 1.21 build compiles with `--release 21` on JDK 25.
+
+- `./gradlew build` - builds the 1.21.x target (paper-api 1.21.11, BlueMap API 2.7.7)
+- `./gradlew build -PmcTarget=26` - builds the 26.x target (paper-api 26.3, BlueMap API 2.8.1)
+
+Artifacts land in `build/libs` as `SignMarkersRedux-<version>-mc1.21.jar` and
+`SignMarkersRedux-<version>-mc26.3.jar`. They coexist, so run the two builds without
+`clean` between them if you want both. `clean` removes both.
+
+Everything that differs between the two targets lives in one table at the top of
+`build.gradle.kts`; adding a third target means adding one entry there.
 
 
 ## How to use

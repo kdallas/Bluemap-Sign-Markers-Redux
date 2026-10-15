@@ -7,6 +7,7 @@ import de.bluecolored.bluemap.api.markers.Marker;
 import de.bluecolored.bluemap.api.markers.MarkerSet;
 import de.bluecolored.bluemap.api.markers.POIMarker;
 import net.immortalmc.bluemap_sign_markers.FeatureProvider;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.block.Block;
@@ -70,7 +71,7 @@ public class SignWatcher implements Listener {
         String iconName;
 
         // ### Mapping sign's line 0 to specific marker type (translates to icon)
-        final String line0 = event.getLine(0);
+        final String line0 = readLine(event, 0);
         if (line0 != null && !line0.isBlank() && line0.startsWith("[") && line0.endsWith("]")) {
             String rawIconName = line0.replaceAll("^\\[(.*)]$", "$1").toLowerCase();
             String iconFileName =  IMAGE_PATH + rawIconName + ".png";
@@ -102,9 +103,9 @@ public class SignWatcher implements Listener {
 
 
         // ### Building label for the sign, from lines 1-3
-        String label1 = event.getLine(1);
-        String label2 = event.getLine(2);
-        String label3 = event.getLine(3);
+        String label1 = readLine(event, 1);
+        String label2 = readLine(event, 2);
+        String label3 = readLine(event, 3);
 
         String fullLabel = label1 + " " + label2 + " " + label3;
 
@@ -128,7 +129,7 @@ public class SignWatcher implements Listener {
         featureProvider.getMarkerSet().get(block.getWorld()).put(id, marker);
 
         // ### Replace first line, with prefix, e.g. [map], to <marker> indicator
-        event.setLine(0, MARKER_PLACEHOLDER);
+        event.line(0, LegacyComponentSerializer.legacySection().deserialize(MARKER_PLACEHOLDER));
         event.getPlayer().sendMessage(formatMessage(String.format(ADDED_TEMPLATE, iconName, pos.getFloorX(), pos.getFloorY(), pos.getFloorZ())));
     }
 
@@ -185,5 +186,21 @@ public class SignWatcher implements Listener {
     private String formatMessage(String message) {
         return LegacyComponentSerializer.legacySection()
                 .serialize(MiniMessage.miniMessage().deserialize(String.format(MSG_PREFIX, message)));
+    }
+
+    /**
+     * Reads a single line from the sign involved in a {@link SignChangeEvent}.
+     * <p>
+     * The event's line accessors are Adventure {@link Component}-based. The icon tag on line 0 and
+     * the label lines are matched as legacy text, so the component is serialized back into the
+     * legacy String form the rest of this class works with.
+     *
+     * @param event the sign change event
+     * @param index the line index to read (0-3)
+     * @return the line's text, or an empty string when the line is unset
+     */
+    private String readLine(SignChangeEvent event, int index) {
+        Component line = event.line(index);
+        return line == null ? "" : LegacyComponentSerializer.legacySection().serialize(line);
     }
 }

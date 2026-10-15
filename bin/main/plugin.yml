@@ -1,8 +1,0 @@
-name: IMMCBluemapSignMarkers
-version: ${version}
-main: net.immortalmc.bluemap_sign_markers.SignMarkers
-api-version: 1.20.1
-folia-supported: true
-authors: [deimiczny, LiaH]
-depend: [BlueMap]
-description: Easily add markers to BlueMap with in-game signs

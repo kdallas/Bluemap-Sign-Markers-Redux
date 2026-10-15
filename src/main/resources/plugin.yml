@@ -1,7 +1,7 @@
-name: IMMCBluemapSignMarkers
+name: SignMarkersRedux
 version: ${version}
 main: net.immortalmc.bluemap_sign_markers.SignMarkers
-api-version: '26.3'
+api-version: '${apiVersion}'
 folia-supported: true
 authors: [deimiczny, LiaH]
 depend: [BlueMap]
