@@ -10,6 +10,22 @@ This fork re-adds support for custom icons uploaded to the `/bluemap/web/markers
 Compatible with Paper. No other software compatibility (e.g. Fabric) is planned or will be accomodated since this is a bespoke fork for the Immortal MC server.
 
 
+## Building
+
+Requires a JDK 25 toolchain (Gradle downloads one via the foojay resolver if absent).
+No JDK 21 install is needed - the 1.21 build compiles with `--release 21` on JDK 25.
+
+- `./gradlew build` - builds the 1.21.x target (paper-api 1.21.11, BlueMap API 2.7.7)
+- `./gradlew build -PmcTarget=26` - builds the 26.x target (paper-api 26.3, BlueMap API 2.8.1)
+
+Artifacts land in `build/libs` as `BluemapSignMarkers-<version>-mc1.21.jar` and
+`BluemapSignMarkers-<version>-mc26.3.jar`. They coexist, so run the two builds without
+`clean` between them if you want both. `clean` removes both.
+
+Everything that differs between the two targets lives in one table at the top of
+`build.gradle.kts`; adding a third target means adding one entry there.
+
+
 ## How to use
 Place any sign in the game. Fill the sign as follows:
 
