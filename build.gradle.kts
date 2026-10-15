@@ -7,6 +7,37 @@ group = "net.immortalmc"
 version = "1.0.1"
 
 // ---------------------------------------------------------------------------
+// Build number (jar name only)
+//
+// Taken from git so it is reproducible: the same commit always produces the
+// same number, and it can only move forward. A dirty tree is flagged, because
+// `rev-list --count HEAD` cannot see uncommitted changes and the name would
+// otherwise claim the build matches its commit when it does not.
+//
+// plugin.yml keeps the plain project version, so the plugin's own version
+// stays semantic and a rebuild of the same commit stays identical.
+//
+// Null when git is unavailable (e.g. a source download), in which case the jar
+// simply carries no build number.
+// ---------------------------------------------------------------------------
+
+val buildNumber: String? = runCatching {
+    val count = providers.exec {
+        commandLine("git", "rev-list", "--count", "HEAD")
+    }.standardOutput.asText.get().trim()
+
+    val dirty = providers.exec {
+        commandLine("git", "status", "--porcelain")
+    }.standardOutput.asText.get().isNotBlank()
+
+    when {
+        count.isEmpty() -> null
+        dirty -> "$count-dirty"
+        else -> count
+    }
+}.getOrNull()
+
+// ---------------------------------------------------------------------------
 // Minecraft targets
 //
 //   ./gradlew build                 -> default target "1.21" (the live server)
@@ -125,8 +156,11 @@ tasks.processResources {
 }
 
 tasks.shadowJar {
-    // The target suffix becomes part of the file name:
-    // SignMarkersRedux-1.0.1-mc1.21.jar, SignMarkersRedux-1.0.1-mc26.3.jar
+    // The build number and target suffix become part of the file name:
+    // SignMarkersRedux-1.0.1.44-mc1.21.jar, SignMarkersRedux-1.0.1.44-mc26.3.jar
+    // This overrides the archive version only; plugin.yml is untouched and keeps
+    // reporting the plain project version.
+    archiveVersion.set(buildNumber?.let { "$pluginVersion.$it" } ?: pluginVersion)
     archiveClassifier.set(mcTarget.jarSuffix)
     mergeServiceFiles()
 
