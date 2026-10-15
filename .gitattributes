@@ -1,0 +1,24 @@
+# Normalize line endings to LF in the repository for all text files.
+# The working-tree form is controlled by each rule below and by core.autocrlf.
+* text=auto
+
+# Keep this file itself LF on every platform, so its own rules cannot be
+# corrupted by core.autocrlf=true rewriting it with CRLF.
+.gitattributes text eol=lf
+
+# The Gradle wrapper launcher is a POSIX shell script and must stay LF,
+# otherwise Linux/macOS builds fail with: /usr/bin/env: 'sh\r': No such file or directory
+# (eol=lf here overrides core.autocrlf=true, which would otherwise check it out as CRLF)
+gradlew text eol=lf
+
+# Windows batch scripts must keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Shell scripts are LF-only.
+*.sh text eol=lf
+
+# Binary assets: never normalize or attempt a text diff.
+*.jar binary
+*.png binary
+*.zip binary
