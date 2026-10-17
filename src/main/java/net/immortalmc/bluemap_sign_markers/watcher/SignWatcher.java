@@ -7,6 +7,7 @@ import de.bluecolored.bluemap.api.markers.Marker;
 import de.bluecolored.bluemap.api.markers.MarkerSet;
 import de.bluecolored.bluemap.api.markers.POIMarker;
 import net.immortalmc.bluemap_sign_markers.FeatureProvider;
+import net.immortalmc.bluemap_sign_markers.helpers.IconResolver;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -17,10 +18,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.SignChangeEvent;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
+import java.util.Locale;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -64,47 +62,33 @@ public class SignWatcher implements Listener {
      * using the sign's position and lines 1-3 as label/detail.
      * - Stores the marker in the marker map under an id built from the block coordinates.
      * - Replaces the first line of the sign with a marker indicator and notifies the player.
-     * If image reading or file access fails, the error is logged and the marker is not created.
+     * If the icon cannot be resolved, the bundled fallback icon is used. If it exists but its size
+     * cannot be determined, the marker is still created with a default anchor and a warning is
+     * logged.
      *
      * @param event the SignChangeEvent triggered when a player finalizes sign text
      */
     @EventHandler
     public void onSignWrite(SignChangeEvent event) {
-        String iconName;
-
         // ### Mapping sign's line 0 to specific marker type (translates to icon)
         final String line0 = readLine(event, 0);
-        if (line0 != null && !line0.isBlank() && line0.startsWith("[") && line0.endsWith("]")) {
-            String rawIconName = line0.replaceAll("^\\[(.*)]$", "$1").toLowerCase();
-            String iconFileName =  IMAGE_PATH + rawIconName + ".png";
-            File tmpIconFile = new File(featureProvider.getWebRoot() + "/" + iconFileName);
-            
-            if (tmpIconFile.exists()) {
-                iconName = rawIconName;
-            } else {
-                iconName = "ban_white";
-                
-            };
-        } else {
-            return;
-        };
-        String icon = IMAGE_PATH + iconName + ".png";
-        File iconFile = new File(featureProvider.getWebRoot() + "/" + icon);
-        
-
-        Vector2i anchor;
-        try {
-            BufferedImage image = ImageIO.read(iconFile);
-            int width = image.getWidth();
-            int height = image.getHeight();
-            // Vector2i is (x, y), so x takes the width and y the height. For the
-            // bundled 32x32 icons the two are equal and the order is invisible;
-            // a custom non-square icon would anchor off-centre if swapped.
-            anchor = new Vector2i(width / 2, height / 2);
-        } catch (IOException e) {
-            featureProvider.getLogger().warning(String.format("Something wrong with image %s, details: %s", iconFile.getPath(), e.getMessage()));
+        if (line0 == null || line0.isBlank() || !line0.startsWith("[") || !line0.endsWith("]")) {
             return;
         }
+
+        // Locale.ROOT: the default-locale toLowerCase() maps "I" to a dotless "i" under a Turkish
+        // locale, so "[ICON]" would stop matching icon.png. IconResolver trims the token, rejects
+        // anything that is not a plain file name, and never returns null: an icon that exists but
+        // cannot be measured is used with a guessed anchor rather than being refused.
+        final String token = line0.substring(1, line0.length() - 1).toLowerCase(Locale.ROOT);
+        final IconResolver.IconRef iconRef =
+                IconResolver.resolve(featureProvider.getWebRoot(), token, featureProvider.getLogger());
+
+        // Webroot-relative and always forward-slashed, e.g. "markers/portal.svg": this string goes
+        // into the marker JSON and is fetched by the browser, so it must not be a Path - on
+        // Windows, Path.toString() would produce backslashes.
+        final String icon = iconRef.path();
+        final Vector2i anchor = iconRef.anchor();
 
 
         // ### Building label for the sign, from lines 1-3
@@ -126,7 +110,7 @@ public class SignWatcher implements Listener {
         Block block = event.getBlock();
         Vector3d pos = new Vector3d(block.getX(), block.getY(), block.getZ());
 
-        String id = MARKER_ID_PREFIX + pos.getX() + "-" + pos.getY() + "-" + pos.getZ();
+        String id = markerIdAt(block.getX(), block.getY(), block.getZ());
         MarkerContent markerContent = MarkerContent.builder()
                 .label1(label1)
                 .label2(label2)
@@ -143,7 +127,7 @@ public class SignWatcher implements Listener {
 
         // ### Replace first line, with prefix, e.g. [map], to <marker> indicator
         event.line(0, LegacyComponentSerializer.legacySection().deserialize(MARKER_PLACEHOLDER));
-        event.getPlayer().sendMessage(formatMessage(String.format(ADDED_TEMPLATE, iconName, pos.getFloorX(), pos.getFloorY(), pos.getFloorZ())));
+        event.getPlayer().sendMessage(formatMessage(String.format(ADDED_TEMPLATE, iconRef.name(), pos.getFloorX(), pos.getFloorY(), pos.getFloorZ())));
     }
 
     /**
@@ -163,7 +147,7 @@ public class SignWatcher implements Listener {
         if (set == null) return;
 
         Vector3d pos = new Vector3d(block.getX(), block.getY(), block.getZ());
-        String id = MARKER_ID_PREFIX + pos.getX() + "-" + pos.getY() + "-" + pos.getZ();
+        String id = markerIdAt(block.getX(), block.getY(), block.getZ());
 
         Marker marker = set.get(id);
         if (marker == null) return;

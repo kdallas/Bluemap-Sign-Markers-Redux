@@ -52,6 +52,22 @@ Place any sign in the game. Fill the sign as follows:
 - **3rd line:** text
 - **4th line:** text
 
+### Icon resolution
+
+Icons live directly in `/bluemap/web/markers/` - no subfolders. Both PNG and SVG work.
+
+- `[portal]` uses `portal.svg` if it exists, otherwise `portal.png`.
+- `[portal.svg]` uses that exact file. An explicit name always wins, so `[portal.png]` picks the
+  PNG even when an SVG of the same name is present.
+- If neither exists, the bundled `ban_white` icon is used.
+- The token is case-insensitive, but the file name must be lower-case on case-sensitive
+  filesystems.
+
+An SVG should carry explicit `width` and `height` attributes; those are used exactly as written.
+A `viewBox` is only consulted when neither is available, and is scaled down so its longest edge is
+at most 50px - viewBox numbers are usually far larger than an icon renders, so they are not used
+as pixel sizes directly.
+
 ## Markers Included by Default
 These are the names that are available automatically for the markers, plus the corresponding icons. Just use any of the values between brackets - `[` and `]`, e.g. `[portal]` - to place the marker on the **BlueMap**.
 It does not matter if you use lowercase or uppercase. The plugin will handle it. If you

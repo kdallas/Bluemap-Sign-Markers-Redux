@@ -18,7 +18,7 @@ public class IconHelper {
 
 
     /**
-     * Copies PNG marker resources from the plugin JAR (inside {@code RES_FOLDER}) into the
+     * Copies PNG and SVG marker resources from the plugin JAR (inside {@code RES_FOLDER}) into the
      * target BlueMap webroot under {@code IMAGE_PATH}. Existing files are not overwritten.
      *
      * @param jar the plugin JAR file to read resources from
@@ -44,7 +44,7 @@ public class IconHelper {
 
             if (!entry.isDirectory()
                     && entryName.startsWith(RES_FOLDER + "/")
-                    && entryName.endsWith(".png")) {
+                    && IconResolver.isSupportedIconFile(entryName)) {
 
                 Path entryPath = Path.of(entryName);
                 Path relative = entryPath.subpath(2, entryPath.getNameCount());
