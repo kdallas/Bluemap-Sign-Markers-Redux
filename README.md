@@ -68,6 +68,28 @@ A `viewBox` is only consulted when neither is available, and is scaled down so i
 at most 50px - viewBox numbers are usually far larger than an icon renders, so they are not used
 as pixel sizes directly.
 
+## Commands
+
+`/signmarkers` manages a world's marker set. Signs create and remove markers on their own; these
+are for everything else - most usefully a marker imported from a BlueMap config, which has no sign
+in the world and therefore no block to break.
+
+| Command | |
+| --- | --- |
+| `/signmarkers list` | List every marker in your world, flagging which have no sign behind them |
+| `/signmarkers remove <id or label>` | Delete one marker |
+| `/signmarkers place-sign <id or label>` | Place a sign at the marker's position, making it sign-backed |
+
+`remove` and `place-sign` accept either the marker id or its label. Labels are matched
+case-insensitively and may contain spaces; if two markers share a label the command refuses and
+lists the matching ids rather than guessing which one you meant.
+
+`place-sign` refuses to place over a non-air block, so it cannot overwrite a build. It then re-keys
+the marker to the id that a block break looks for - which is what makes breaking the new sign
+remove the marker rather than leaving it behind.
+
+Requires the `signmarkers.admin` permission, granted to operators by default.
+
 ## Markers Included by Default
 These are the names that are available automatically for the markers, plus the corresponding icons. Just use any of the values between brackets - `[` and `]`, e.g. `[portal]` - to place the marker on the **BlueMap**.
 It does not matter if you use lowercase or uppercase. The plugin will handle it. If you
