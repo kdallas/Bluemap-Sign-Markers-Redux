@@ -107,8 +107,19 @@ public class MarkerContent {
      * @return formatted timestamp ("dd MMM yyyy HH:mm") or empty string if timestamp is unset
      */
     public String getTimestamp() {
-        if (timestampMillis <= 0) return "";
-        Instant instant = Instant.ofEpochMilli(timestampMillis);
+        return formatTimestamp(timestampMillis);
+    }
+
+    /**
+     * Formats epoch milliseconds for display, so the format is defined once for both markers
+     * created from signs and markers re-attributed when their template is reapplied.
+     *
+     * @param millis epoch milliseconds
+     * @return the formatted timestamp, or an empty string when {@code millis} is not positive
+     */
+    public static String formatTimestamp(long millis) {
+        if (millis <= 0) return "";
+        Instant instant = Instant.ofEpochMilli(millis);
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern(DATE_FORMAT, Locale.ENGLISH).withZone(ZoneId.systemDefault());
         return fmt.format(instant);
     }

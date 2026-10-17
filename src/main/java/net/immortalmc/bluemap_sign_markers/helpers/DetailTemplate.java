@@ -23,11 +23,12 @@ import java.util.regex.Pattern;
  * markup - BlueMap assigns this string to {@code innerHTML}, and unescaped player input there
  * would execute in the browser of anyone opening the popup.
  *
- * <p>The values needed to rebuild a popup are also stored, as a base64 HTML comment appended to
- * the detail. A few of them - the individual sign lines, author and creation time - exist nowhere
- * else once the marker is written, so without this the template could not be reapplied to
- * existing markers without losing them. BlueMap neither sanitises nor strips comments, and
- * {@code detail} is a plain string that survives the plugin's save, so the comment round-trips.
+ * <p>The individual sign lines are also stored, as a base64 HTML comment appended to the detail.
+ * They exist nowhere else once the marker is written - the marker keeps only the joined label -
+ * so without this a reapplied template could not restore them. BlueMap neither sanitises nor
+ * strips comments, and {@code detail} is a plain string that survives the plugin's save, so the
+ * comment round-trips. Author and creation time are deliberately not stored: a reapply stamps
+ * them with whoever ran it and when.
  */
 public final class DetailTemplate {
 
@@ -43,7 +44,7 @@ public final class DetailTemplate {
             Pattern.compile("<!--\\s*signmarkers:([A-Za-z0-9+/=]+)\\s*-->");
 
     /** Keys persisted alongside the rendered HTML, because no marker field carries them. */
-    private static final String[] STORED_KEYS = { "label1", "label2", "label3", "author", "timestamp" };
+    private static final String[] STORED_KEYS = { "label1", "label2", "label3" };
 
     /**
      * Template written on first run.
@@ -100,7 +101,7 @@ public final class DetailTemplate {
                 <div class="smr-info-name">Position (x y z):</div>
                 <div class="smr-info-value">{{ position }}</div>
                 <hr/>
-                <div class="smr-info-name">Created {{ timestamp }}</div>
+                <div class="smr-info-name">Placed {{ timestamp }}</div>
                 <div class="smr-info-value">by {{ author }}</div>
             </div>
             """;
@@ -176,7 +177,7 @@ public final class DetailTemplate {
     }
 
     /**
-     * The comment carrying the values that no marker field retains, for a later re-render.
+     * The comment carrying the individual sign lines, which no marker field retains.
      *
      * @param values the same map passed to {@link #render}
      * @return an HTML comment, base64-encoded

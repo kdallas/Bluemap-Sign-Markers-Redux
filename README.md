@@ -79,7 +79,8 @@ in the world and therefore no block to break.
 | `/signmarkers list` | List every marker in your world, flagging which have no sign behind them |
 | `/signmarkers remove <id or label>` | Delete one marker |
 | `/signmarkers place-sign <id or label>` | Place a sign at the marker's position, making it sign-backed |
-| `/signmarkers reapply` | Rebuild every marker's popup with the current template |
+| `/signmarkers reapply [id or label]` | Rebuild marker popups with the current template - all of them, or just one |
+| `/signmarkers regenerate [id or label]` | As `reapply`, but also re-reads the sign at each marker's position |
 
 `remove` and `place-sign` accept either the marker id or its label. Labels are matched
 case-insensitively and may contain spaces; if two markers share a label the command refuses and
@@ -88,6 +89,12 @@ lists the matching ids rather than guessing which one you meant.
 `place-sign` refuses to place over a non-air block, so it cannot overwrite a build. It then re-keys
 the marker to the id that a block break looks for - which is what makes breaking the new sign
 remove the marker rather than leaving it behind.
+
+`reapply` and `regenerate` differ in where they get their data. `reapply` re-renders what the
+marker already stores. `regenerate` first looks for a sign at the marker's position and, if there
+is one, takes the icon, label and text from it - which is the only way to pick up a sign that was
+edited after the marker was created, since that edit is otherwise ignored once line 0 holds the
+plugin's placeholder. Where no sign exists both behave the same.
 
 Requires the `signmarkers.admin` permission, granted to operators by default.
 
@@ -115,7 +122,13 @@ Unknown placeholders are left as written, so a typo shows up in the popup rather
 vanishing.
 
 The rendered HTML is stored on the marker at creation, so editing the template only affects
-markers made afterwards. Run `/signmarkers reapply` to rebuild the existing ones in your world.
+markers made afterwards. Run `/signmarkers reapply` to rebuild the existing ones in your world -
+all of them, or one by id or label.
+
+Author and date are always set to whoever runs the command and the current time, so a reapplied
+marker records who last rendered it rather than its original creator. Only the individual sign
+lines are restored from the marker; imported markers, which never had them, fall back to the
+joined label.
 
 The default template styles itself with BlueMap's theme variables (`--theme-fg-light`,
 `--theme-bg-hover`, `--theme-bg-light`), so the popup follows the webapp's light or dark theme. Note

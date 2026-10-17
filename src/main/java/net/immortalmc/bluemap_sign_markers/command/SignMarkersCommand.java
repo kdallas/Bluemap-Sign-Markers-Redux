@@ -6,6 +6,8 @@ import de.bluecolored.bluemap.api.markers.MarkerSet;
 import de.bluecolored.bluemap.api.markers.POIMarker;
 import net.immortalmc.bluemap_sign_markers.FeatureProvider;
 import net.immortalmc.bluemap_sign_markers.helpers.DetailTemplate;
+import net.immortalmc.bluemap_sign_markers.helpers.IconResolver;
+import net.immortalmc.bluemap_sign_markers.watcher.MarkerContent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -40,7 +42,7 @@ import static net.immortalmc.bluemap_sign_markers.Constants.*;
 public class SignMarkersCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS =
-            List.of("list", "remove", "place-sign", "reapply");
+            List.of("list", "remove", "place-sign", "reapply", "regenerate");
 
     /** Longest label copied onto a placed sign. A sign line is bounded; an imported label is not. */
     private static final int MAX_SIGN_LINE = 100;
@@ -74,17 +76,20 @@ public class SignMarkersCommand implements CommandExecutor, TabCompleter {
 
         String sub = args[0].toLowerCase(Locale.ROOT);
         if (sub.equals("list")) return list(player);
-        if (sub.equals("reapply")) return reapply(player);
-        if (args.length < 2) return usage(sender, label);
 
         // Joined rather than taken as args[1]: a label contains spaces, so
         // "place-sign Land of the Abstract" has to arrive as one token. Ids never contain a
-        // space, so this is a superset of taking a single argument.
-        String token = String.join(" ", List.of(args).subList(1, args.length));
+        // space, so this is a superset of taking a single argument. Null when nothing was given,
+        // which only "reapply" treats as meaningful - it then applies to the whole world.
+        String token = args.length < 2
+                ? null
+                : String.join(" ", List.of(args).subList(1, args.length));
 
         return switch (sub) {
-            case "remove" -> remove(player, token);
-            case "place-sign" -> placeSign(player, token);
+            case "reapply" -> token == null ? reapplyAll(player) : reapplyOne(player, token);
+            case "regenerate" -> token == null ? regenerateAll(player) : regenerateOne(player, token);
+            case "remove" -> token == null ? usage(sender, label) : remove(player, token);
+            case "place-sign" -> token == null ? usage(sender, label) : placeSign(player, token);
             default -> usage(sender, label);
         };
     }
@@ -97,7 +102,10 @@ public class SignMarkersCommand implements CommandExecutor, TabCompleter {
         }
         if (args.length >= 2) {
             String sub = args[0].toLowerCase(Locale.ROOT);
-            if (!sub.equals("remove") && !sub.equals("place-sign")) return List.of();
+            if (!sub.equals("remove") && !sub.equals("place-sign")
+                    && !sub.equals("reapply") && !sub.equals("regenerate")) {
+                return List.of();
+            }
             if (!(sender instanceof Player player)) return List.of();
 
             MarkerSet set = markerSetFor(player);
@@ -266,7 +274,7 @@ public class SignMarkersCommand implements CommandExecutor, TabCompleter {
      * edited by hand - fall back to what the marker itself carries, which has no individual sign
      * lines, author or creation time to restore.
      */
-    private boolean reapply(Player player) {
+    private boolean reapplyAll(Player player) {
         MarkerSet set = markerSetFor(player);
         String world = player.getWorld().getName();
 
@@ -275,44 +283,235 @@ public class SignMarkersCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        Path dataFolder = featureProvider.getPlugin().getDataFolder().toPath();
-        String template = DetailTemplate.readTemplate(dataFolder, featureProvider.getLogger());
-
+        String template = currentTemplate();
         int updated = 0;
+        int withoutStoredValues = 0;
         for (Marker marker : set.getMarkers().values()) {
             if (!(marker instanceof POIMarker poi)) continue;
+            if (!reapplyMarker(poi, template, world, player)) withoutStoredValues++;
+            updated++;
+        }
 
-            Map<String, String> values = DetailTemplate.extractStored(poi.getDetail());
+        featureProvider.saveMarkerSet(player.getWorld());
+        send(player, "Re-rendered " + updated + " markers in " + world
+                + (withoutStoredValues == 0 ? ""
+                : "; " + withoutStoredValues + " had no stored sign lines and used the joined label"));
+        return true;
+    }
+
+    /** Re-renders a single marker, leaving the rest of the set untouched. */
+    private boolean reapplyOne(Player player, String token) {
+        MarkerSet set = markerSetFor(player);
+        if (set == null) {
+            send(player, "No marker set in " + player.getWorld().getName());
+            return true;
+        }
+
+        String id = findMarkerId(player, set, token);
+        if (id == null) return true;
+
+        Marker marker = set.get(id);
+        if (!(marker instanceof POIMarker poi)) {
+            send(player, "'" + id + "' is not a POI marker, so it has no popup template");
+            return true;
+        }
+
+        boolean hadStoredValues =
+                reapplyMarker(poi, currentTemplate(), player.getWorld().getName(), player);
+        featureProvider.saveMarkerSet(player.getWorld());
+        send(player, "Re-rendered '" + poi.getLabel() + "' (" + id + ")"
+                + (hadStoredValues ? "" : " - no stored sign lines, so the joined label was used"));
+        return true;
+    }
+
+    /**
+     * Rebuilds one marker's popup from the stored values, falling back to what the marker itself
+     * carries when it has none.
+     */
+    private boolean reapplyMarker(POIMarker poi, String template, String world, Player by) {
+        Map<String, String> values = DetailTemplate.extractStored(poi.getDetail());
+        boolean restoredLabels = values != null;
+        if (values == null) {
+            // No comment at all: an imported marker, or one predating the stored values. The
+            // joined label is all that survives, so it becomes the first sign line.
+            values = new LinkedHashMap<>();
+            values.put("label1", poi.getLabel());
+            values.put("label2", "");
+            values.put("label3", "");
+        }
+
+        // Always stamped, never restored: a reapply is an edit, so the popup records who last
+        // rendered it and when, rather than preserving a creator that may never have existed.
+        values.put("author", by.getName());
+        values.put("timestamp", MarkerContent.formatTimestamp(System.currentTimeMillis()));
+
+        Vector3d pos = poi.getPosition();
+        int x = (int) Math.floor(pos.getX());
+        int y = (int) Math.floor(pos.getY());
+        int z = (int) Math.floor(pos.getZ());
+
+        values.put("label", poi.getLabel());
+        values.put("x", String.valueOf(x));
+        values.put("y", String.valueOf(y));
+        values.put("z", String.valueOf(z));
+        values.put("position", x + " " + y + " " + z);
+        values.put("icon", poi.getIconAddress() == null ? "" : poi.getIconAddress());
+        values.put("world", world);
+
+        poi.setDetail(DetailTemplate.render(template, values) + DetailTemplate.storedComment(values));
+        return restoredLabels;
+    }
+
+    private String currentTemplate() {
+        Path dataFolder = featureProvider.getPlugin().getDataFolder().toPath();
+        return DetailTemplate.readTemplate(dataFolder, featureProvider.getLogger());
+    }
+
+    /**
+     * Rebuilds every marker's popup from its sign where one exists, falling back to the stored
+     * data otherwise.
+     */
+    private boolean regenerateAll(Player player) {
+        MarkerSet set = markerSetFor(player);
+        String world = player.getWorld().getName();
+
+        if (set == null || set.getMarkers().isEmpty()) {
+            send(player, "No markers in " + world);
+            return true;
+        }
+
+        String template = currentTemplate();
+        int updated = 0;
+        int fromSign = 0;
+        for (Marker marker : set.getMarkers().values()) {
+            if (!(marker instanceof POIMarker poi)) continue;
+            if (regenerateMarker(poi, player.getWorld(), template, player)) fromSign++;
+            updated++;
+        }
+
+        featureProvider.saveMarkerSet(player.getWorld());
+        send(player, "Regenerated " + updated + " markers in " + world
+                + "; " + fromSign + " rebuilt from a sign");
+        return true;
+    }
+
+    /** Rebuilds a single marker from its sign where one exists. */
+    private boolean regenerateOne(Player player, String token) {
+        MarkerSet set = markerSetFor(player);
+        if (set == null) {
+            send(player, "No marker set in " + player.getWorld().getName());
+            return true;
+        }
+
+        String id = findMarkerId(player, set, token);
+        if (id == null) return true;
+
+        Marker marker = set.get(id);
+        if (!(marker instanceof POIMarker poi)) {
+            send(player, "'" + id + "' is not a POI marker, so it has no popup template");
+            return true;
+        }
+
+        boolean fromSign = regenerateMarker(poi, player.getWorld(), currentTemplate(), player);
+        featureProvider.saveMarkerSet(player.getWorld());
+        send(player, "Regenerated '" + poi.getLabel() + "' (" + id + ")"
+                + (fromSign ? "" : " - no sign at that position, so the stored lines were used"));
+        return true;
+    }
+
+    /**
+     * Rebuilds one marker from the sign at its position, if there is one.
+     * <p>
+     * A superset of {@link #reapplyMarker}: where that re-renders what the marker already holds,
+     * this also picks up edits made to the sign afterwards. Those are otherwise invisible - once
+     * a marker exists, line 0 holds the plugin's placeholder rather than an icon token, so
+     * {@code onSignWrite} returns early and never notices a change to lines 1-3.
+     * <p>
+     * When a sign is found, its icon token (if line 0 still carries one), label and lines are all
+     * taken from it. Otherwise the marker falls back to its stored data, exactly as reapply does.
+     *
+     * @return true when a sign was found and used
+     */
+    private boolean regenerateMarker(POIMarker poi, World world, String template, Player by) {
+        Vector3d position = poi.getPosition();
+        int x = (int) Math.floor(position.getX());
+        int y = (int) Math.floor(position.getY());
+        int z = (int) Math.floor(position.getZ());
+
+        String label1 = null;
+        String label2 = null;
+        String label3 = null;
+        IconResolver.IconRef resolvedIcon = null;
+
+        if (world.getBlockAt(x, y, z).getState() instanceof Sign sign) {
+            SignSide front = sign.getSide(Side.FRONT);
+
+            String line0 = plain(front.line(0)).trim();
+            if (line0.startsWith("[") && line0.endsWith("]")) {
+                String token = line0.substring(1, line0.length() - 1).toLowerCase(Locale.ROOT);
+                resolvedIcon = IconResolver.resolve(
+                        featureProvider.getWebRoot(), token, featureProvider.getLogger());
+            }
+
+            label1 = plain(front.line(1));
+            label2 = plain(front.line(2));
+            label3 = plain(front.line(3));
+        }
+
+        boolean fromSign = label1 != null;
+
+        Map<String, String> values;
+        if (fromSign) {
+            values = new LinkedHashMap<>();
+            values.put("label1", label1);
+            values.put("label2", label2);
+            values.put("label3", label3);
+        } else {
+            values = DetailTemplate.extractStored(poi.getDetail());
             if (values == null) {
                 values = new LinkedHashMap<>();
                 values.put("label1", poi.getLabel());
                 values.put("label2", "");
                 values.put("label3", "");
-                values.put("author", "");
-                values.put("timestamp", "");
             }
-
-            Vector3d pos = poi.getPosition();
-            int x = (int) Math.floor(pos.getX());
-            int y = (int) Math.floor(pos.getY());
-            int z = (int) Math.floor(pos.getZ());
-
-            values.put("label", poi.getLabel());
-            values.put("x", String.valueOf(x));
-            values.put("y", String.valueOf(y));
-            values.put("z", String.valueOf(z));
-            values.put("position", x + " " + y + " " + z);
-            values.put("icon", poi.getIconAddress() == null ? "" : poi.getIconAddress());
-            values.put("world", world);
-
-            poi.setDetail(DetailTemplate.render(template, values)
-                    + DetailTemplate.storedComment(values));
-            updated++;
         }
 
-        featureProvider.saveMarkerSet(player.getWorld());
-        send(player, "Re-rendered " + updated + " markers in " + world);
-        return true;
+        // Same policy as reapply: stamped with whoever ran this, never restored.
+        values.put("author", by.getName());
+        values.put("timestamp", MarkerContent.formatTimestamp(System.currentTimeMillis()));
+
+        // Bring the marker itself into line with the sign, so the name shown in BlueMap's marker
+        // list matches the popup rather than staying at whatever it was created with.
+        if (fromSign) {
+            String joined = joinLabels(label1, label2, label3);
+            if (!joined.isBlank()) poi.setLabel(joined);
+            if (resolvedIcon != null) poi.setIcon(resolvedIcon.path(), resolvedIcon.anchor());
+        }
+
+        values.put("label", poi.getLabel());
+        values.put("x", String.valueOf(x));
+        values.put("y", String.valueOf(y));
+        values.put("z", String.valueOf(z));
+        values.put("position", x + " " + y + " " + z);
+        values.put("icon", poi.getIconAddress() == null ? "" : poi.getIconAddress());
+        values.put("world", world.getName());
+
+        poi.setDetail(DetailTemplate.render(template, values) + DetailTemplate.storedComment(values));
+        return fromSign;
+    }
+
+    /** A sign line as the plain text the marker stores, matching how SignWatcher reads them. */
+    private static String plain(Component component) {
+        return component == null
+                ? ""
+                : LegacyComponentSerializer.legacySection().serialize(component);
+    }
+
+    /** Joins the label lines the same way a marker created from the sign would. */
+    private static String joinLabels(String... lines) {
+        return List.of(lines).stream()
+                .filter(line -> line != null && !line.isBlank())
+                .collect(Collectors.joining(" "));
     }
 
     // ------------------------------------------------------------------
@@ -358,7 +557,7 @@ public class SignMarkersCommand implements CommandExecutor, TabCompleter {
     }
 
     private boolean usage(CommandSender sender, String label) {
-        send(sender, "Usage: /" + label + " <list|remove|place-sign|reapply> [marker-id]");
+        send(sender, "Usage: /" + label + " <list|remove|place-sign|reapply|regenerate> [marker-id]");
         return true;
     }
 
