@@ -15,8 +15,10 @@ gradlew text eol=lf
 *.bat text eol=crlf
 *.cmd text eol=crlf
 
-# Shell scripts are LF-only.
+# Shell scripts and Python entry points are LF-only: their shebang line is
+# executed by the OS, and a trailing CR breaks it the same way it does for gradlew.
 *.sh text eol=lf
+*.py text eol=lf
 
 # Binary assets: never normalize or attempt a text diff.
 *.jar binary

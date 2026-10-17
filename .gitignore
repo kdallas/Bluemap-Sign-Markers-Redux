@@ -39,3 +39,5 @@ temp/
 
 bin/
 bin/*
+### Python
+__pycache__/
