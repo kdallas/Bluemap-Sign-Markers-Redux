@@ -22,7 +22,7 @@ import org.bukkit.entity.Player;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 import static net.immortalmc.bluemap_sign_markers.Constants.*;
 
@@ -98,17 +98,32 @@ public class SignMarkersCommand implements CommandExecutor, TabCompleter {
             if (set == null) return List.of();
 
             // The typed token is everything after the subcommand, so a partly-typed multi-word
-            // label still filters sensibly. Both ids and labels are offered: the id is the
-            // unambiguous fallback when two markers share a label.
+            // label still filters sensibly.
             String typed = String.join(" ", List.of(args).subList(1, args.length))
                     .toLowerCase(Locale.ROOT);
 
+            // One entry per marker. The label is preferred because it is what the player
+            // recognises, but an id is suggested when there is no usable label - a label that is
+            // blank, or one shared with another marker. findMarkerId refuses an ambiguous label
+            // rather than guessing, so suggesting it would only lead to that refusal.
+            // Counted case-insensitively to match how labels are resolved.
+            Map<String, Long> labelCounts = set.getMarkers().values().stream()
+                    .map(marker -> marker.getLabel().toLowerCase(Locale.ROOT))
+                    .collect(Collectors.groupingBy(label -> label, Collectors.counting()));
+
             return set.getMarkers().entrySet().stream()
-                    .flatMap(entry -> Stream.of(entry.getKey(), entry.getValue().getLabel()))
-                    .filter(candidate -> !candidate.isBlank())
+                    .map(entry -> {
+                        String label = entry.getValue().getLabel();
+                        boolean usable = !label.isBlank()
+                                && labelCounts.getOrDefault(label.toLowerCase(Locale.ROOT), 0L) == 1L;
+                        return usable ? label : entry.getKey();
+                    })
                     .filter(candidate -> candidate.toLowerCase(Locale.ROOT).startsWith(typed))
                     .distinct()
-                    .sorted(String.CASE_INSENSITIVE_ORDER)
+                    // Deliberately unsorted. Minecraft's suggestion builder alphabetises this list
+                    // after the plugin returns it, so any order set here is gone before the packet
+                    // is sent (PaperMC/Paper#12787). Only the list command controls its ordering,
+                    // because we render that ourselves.
                     .toList();
         }
         return List.of();
@@ -130,7 +145,14 @@ public class SignMarkersCommand implements CommandExecutor, TabCompleter {
 
         send(player, set.getMarkers().size() + " markers in " + world + ":");
         set.getMarkers().entrySet().stream()
-                .sorted((a, b) -> a.getValue().getLabel().compareToIgnoreCase(b.getValue().getLabel()))
+                .sorted((a, b) -> {
+                    int byTitle = sortKey(a.getValue().getLabel())
+                            .compareTo(sortKey(b.getValue().getLabel()));
+                    // Equal keys ("The Beach" and "Beach") fall back to the full label so the
+                    // order is deterministic rather than dependent on map iteration.
+                    return byTitle != 0 ? byTitle
+                            : a.getValue().getLabel().compareToIgnoreCase(b.getValue().getLabel());
+                })
                 .forEach(entry -> {
                     String id = entry.getKey();
                     Marker marker = entry.getValue();
@@ -274,6 +296,36 @@ public class SignMarkersCommand implements CommandExecutor, TabCompleter {
     private boolean usage(CommandSender sender, String label) {
         send(sender, "Usage: /" + label + " <list|remove|place-sign> [marker-id]");
         return true;
+    }
+
+    /**
+     * Leading articles ignored when ordering. Lower-cased, and the trailing space matters: a
+     * label that merely starts with "A" such as "Ahoy Shipwreck" is not an article.
+     */
+    private static final List<String> SORT_ARTICLES = List.of("the ", "an ", "a ");
+
+    /**
+     * Sort key for a label, ignoring a leading article and case, so titles order the way a reader
+     * expects: "The Beach" sorts with B rather than with T, and "The Rift" with R.
+     * <p>
+     * Only the ordering is affected - the label itself is never changed, so resolution by label
+     * still requires what is actually stored.
+     *
+     * @param label the marker label
+     * @return the comparison key, never null
+     */
+    private static String sortKey(String label) {
+        String key = label == null ? "" : label.trim();
+        String lower = key.toLowerCase(Locale.ROOT);
+
+        for (String article : SORT_ARTICLES) {
+            // The length check keeps a label of exactly "The" from reducing to nothing.
+            if (lower.startsWith(article) && lower.length() > article.length()) {
+                key = key.substring(article.length()).trim();
+                break;
+            }
+        }
+        return key.toLowerCase(Locale.ROOT);
     }
 
     /** Truncates a marker label to something a sign line can hold. */
