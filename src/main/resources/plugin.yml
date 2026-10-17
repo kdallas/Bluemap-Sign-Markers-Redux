@@ -6,3 +6,14 @@ folia-supported: true
 authors: [deimiczny, LiaH]
 depend: [BlueMap]
 description: Easily add markers to BlueMap with in-game signs
+
+commands:
+  signmarkers:
+    description: List, remove and place signs for BlueMap sign markers
+    usage: "/signmarkers <list|remove|place-sign> [marker-id]"
+    permission: signmarkers.admin
+
+permissions:
+  signmarkers.admin:
+    description: Manage BlueMap sign markers
+    default: op

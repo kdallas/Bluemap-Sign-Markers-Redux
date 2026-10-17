@@ -2,11 +2,13 @@ package net.immortalmc.bluemap_sign_markers;
 
 import de.bluecolored.bluemap.api.BlueMapAPI;
 import de.bluecolored.bluemap.api.markers.MarkerSet;
+import net.immortalmc.bluemap_sign_markers.command.SignMarkersCommand;
 import net.immortalmc.bluemap_sign_markers.helpers.IconHelper;
 import net.immortalmc.bluemap_sign_markers.helpers.MarkerHelper;
 import net.immortalmc.bluemap_sign_markers.watcher.SignWatcher;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -72,6 +74,7 @@ public class SignMarkers extends JavaPlugin implements FeatureProvider {
     public void onEnable() {
         logger = getLogger();
         markerHelper = new MarkerHelper(this);
+        registerCommands();
         BlueMapAPI.onEnable(api -> {
                     try {
                         JarFile jar = new JarFile(this.getFile());
@@ -87,6 +90,23 @@ public class SignMarkers extends JavaPlugin implements FeatureProvider {
                     }
                 }
         );
+    }
+
+    /**
+     * Registers the {@code /signmarkers} command declared in plugin.yml.
+     * <p>
+     * A missing declaration is reported rather than thrown, so the plugin still loads (and signs
+     * still work) if the command block is ever removed from plugin.yml.
+     */
+    private void registerCommands() {
+        PluginCommand command = getCommand("signmarkers");
+        if (command == null) {
+            logger.warning("Command 'signmarkers' is missing from plugin.yml; it is disabled");
+            return;
+        }
+        SignMarkersCommand executor = new SignMarkersCommand(this);
+        command.setExecutor(executor);
+        command.setTabCompleter(executor);
     }
 
     /**
