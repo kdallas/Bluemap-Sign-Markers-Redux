@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "net.immortalmc"
-version = "1.0.1"
+version = "1.1.0"
 
 // ---------------------------------------------------------------------------
 // Build number (jar name only)
