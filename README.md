@@ -92,7 +92,7 @@ Requires the `signmarkers.admin` permission, granted to operators by default.
 
 ## Markers Included by Default
 These are the names that are available automatically for the markers, plus the corresponding icons. Just use any of the values between brackets - `[` and `]`, e.g. `[portal]` - to place the marker on the **BlueMap**.
-It does not matter if you use lowercase or uppercase. The plugin will handle it. If you
+It does not matter if you use lowercase or uppercase; the plugin will handle it.
 
 | Name             | Icon                                                                    |     | Name              | Icon                                                                     |
 | ---------------- | ----------------------------------------------------------------------- | --- | ----------------- | ------------------------------------------------------------------------ |
