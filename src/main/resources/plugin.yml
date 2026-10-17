@@ -10,7 +10,7 @@ description: Easily add markers to BlueMap with in-game signs
 commands:
   signmarkers:
     description: List, remove and place signs for BlueMap sign markers
-    usage: "/signmarkers <list|remove|place-sign> [marker-id]"
+    usage: "/signmarkers <list|remove|place-sign|reapply> [marker-id]"
     permission: signmarkers.admin
 
 permissions:

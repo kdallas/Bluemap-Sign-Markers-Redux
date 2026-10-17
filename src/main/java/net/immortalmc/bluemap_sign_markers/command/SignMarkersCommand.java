@@ -3,7 +3,9 @@ package net.immortalmc.bluemap_sign_markers.command;
 import com.flowpowered.math.vector.Vector3d;
 import de.bluecolored.bluemap.api.markers.Marker;
 import de.bluecolored.bluemap.api.markers.MarkerSet;
+import de.bluecolored.bluemap.api.markers.POIMarker;
 import net.immortalmc.bluemap_sign_markers.FeatureProvider;
+import net.immortalmc.bluemap_sign_markers.helpers.DetailTemplate;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -19,6 +21,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
+import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -35,7 +39,8 @@ import static net.immortalmc.bluemap_sign_markers.Constants.*;
  */
 public class SignMarkersCommand implements CommandExecutor, TabCompleter {
 
-    private static final List<String> SUBCOMMANDS = List.of("list", "remove", "place-sign");
+    private static final List<String> SUBCOMMANDS =
+            List.of("list", "remove", "place-sign", "reapply");
 
     /** Longest label copied onto a placed sign. A sign line is bounded; an imported label is not. */
     private static final int MAX_SIGN_LINE = 100;
@@ -69,6 +74,7 @@ public class SignMarkersCommand implements CommandExecutor, TabCompleter {
 
         String sub = args[0].toLowerCase(Locale.ROOT);
         if (sub.equals("list")) return list(player);
+        if (sub.equals("reapply")) return reapply(player);
         if (args.length < 2) return usage(sender, label);
 
         // Joined rather than taken as args[1]: a label contains spaces, so
@@ -251,6 +257,64 @@ public class SignMarkersCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    /**
+     * Re-renders every marker's popup with the current template.
+     * <p>
+     * The detail is baked in when a marker is created, so editing the template only affects
+     * markers made afterwards. This rebuilds the existing ones from the values stored alongside
+     * their detail. Markers without those values - imported from a config, or whose detail was
+     * edited by hand - fall back to what the marker itself carries, which has no individual sign
+     * lines, author or creation time to restore.
+     */
+    private boolean reapply(Player player) {
+        MarkerSet set = markerSetFor(player);
+        String world = player.getWorld().getName();
+
+        if (set == null || set.getMarkers().isEmpty()) {
+            send(player, "No markers in " + world);
+            return true;
+        }
+
+        Path dataFolder = featureProvider.getPlugin().getDataFolder().toPath();
+        String template = DetailTemplate.readTemplate(dataFolder, featureProvider.getLogger());
+
+        int updated = 0;
+        for (Marker marker : set.getMarkers().values()) {
+            if (!(marker instanceof POIMarker poi)) continue;
+
+            Map<String, String> values = DetailTemplate.extractStored(poi.getDetail());
+            if (values == null) {
+                values = new LinkedHashMap<>();
+                values.put("label1", poi.getLabel());
+                values.put("label2", "");
+                values.put("label3", "");
+                values.put("author", "");
+                values.put("timestamp", "");
+            }
+
+            Vector3d pos = poi.getPosition();
+            int x = (int) Math.floor(pos.getX());
+            int y = (int) Math.floor(pos.getY());
+            int z = (int) Math.floor(pos.getZ());
+
+            values.put("label", poi.getLabel());
+            values.put("x", String.valueOf(x));
+            values.put("y", String.valueOf(y));
+            values.put("z", String.valueOf(z));
+            values.put("position", x + " " + y + " " + z);
+            values.put("icon", poi.getIconAddress() == null ? "" : poi.getIconAddress());
+            values.put("world", world);
+
+            poi.setDetail(DetailTemplate.render(template, values)
+                    + DetailTemplate.storedComment(values));
+            updated++;
+        }
+
+        featureProvider.saveMarkerSet(player.getWorld());
+        send(player, "Re-rendered " + updated + " markers in " + world);
+        return true;
+    }
+
     // ------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------
@@ -294,7 +358,7 @@ public class SignMarkersCommand implements CommandExecutor, TabCompleter {
     }
 
     private boolean usage(CommandSender sender, String label) {
-        send(sender, "Usage: /" + label + " <list|remove|place-sign> [marker-id]");
+        send(sender, "Usage: /" + label + " <list|remove|place-sign|reapply> [marker-id]");
         return true;
     }
 

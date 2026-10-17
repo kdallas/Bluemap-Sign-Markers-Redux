@@ -79,6 +79,7 @@ in the world and therefore no block to break.
 | `/signmarkers list` | List every marker in your world, flagging which have no sign behind them |
 | `/signmarkers remove <id or label>` | Delete one marker |
 | `/signmarkers place-sign <id or label>` | Place a sign at the marker's position, making it sign-backed |
+| `/signmarkers reapply` | Rebuild every marker's popup with the current template |
 
 `remove` and `place-sign` accept either the marker id or its label. Labels are matched
 case-insensitively and may contain spaces; if two markers share a label the command refuses and
@@ -89,6 +90,38 @@ the marker to the id that a block break looks for - which is what makes breaking
 remove the marker rather than leaving it behind.
 
 Requires the `signmarkers.admin` permission, granted to operators by default.
+
+## Popup template
+
+`plugins/SignMarkersRedux/template.html` controls the HTML shown when a marker is clicked. It is
+written on first start and never overwritten, so edits survive upgrades. The file is re-read each
+time a marker is created, so changes take effect on the next sign without a restart.
+
+Values are substituted into `{{ name }}` placeholders and are **always HTML-escaped** - the
+template is trusted markup, the sign text is not.
+
+| Placeholder | Value |
+| --- | --- |
+| `{{ label }}` | the joined label, as the marker itself shows it |
+| `{{ label1 }}` `{{ label2 }}` `{{ label3 }}` | the individual sign lines |
+| `{{ x }}` `{{ y }}` `{{ z }}` | coordinates |
+| `{{ position }}` | coordinates pre-joined as `x y z` |
+| `{{ timestamp }}` | when the marker was created |
+| `{{ author }}` | who created it |
+| `{{ icon }}` | icon path, ready for use in `<img src="...">` |
+| `{{ world }}` | world name |
+
+Unknown placeholders are left as written, so a typo shows up in the popup rather than silently
+vanishing.
+
+The rendered HTML is stored on the marker at creation, so editing the template only affects
+markers made afterwards. Run `/signmarkers reapply` to rebuild the existing ones in your world.
+
+The default template styles itself with BlueMap's theme variables (`--theme-fg-light`,
+`--theme-bg-hover`, `--theme-bg-light`), so the popup follows the webapp's light or dark theme. Note
+that a `<style>` block in the template applies document-wide while the popup is open, and is
+repeated in every marker's stored detail - fine for a few dozen markers, worth trimming for
+hundreds.
 
 ## Markers Included by Default
 These are the names that are available automatically for the markers, plus the corresponding icons. Just use any of the values between brackets - `[` and `]`, e.g. `[portal]` - to place the marker on the **BlueMap**.

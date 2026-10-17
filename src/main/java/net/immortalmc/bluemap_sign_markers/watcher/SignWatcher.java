@@ -7,6 +7,7 @@ import de.bluecolored.bluemap.api.markers.Marker;
 import de.bluecolored.bluemap.api.markers.MarkerSet;
 import de.bluecolored.bluemap.api.markers.POIMarker;
 import net.immortalmc.bluemap_sign_markers.FeatureProvider;
+import net.immortalmc.bluemap_sign_markers.helpers.DetailTemplate;
 import net.immortalmc.bluemap_sign_markers.helpers.IconResolver;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -18,7 +19,10 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.SignChangeEvent;
 
+import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -118,7 +122,7 @@ public class SignWatcher implements Listener {
                 .position(pos)
                 .author(event.getPlayer().getName())
                 .build();
-        String markerDetails = buildMarkerContent(markerContent);
+        String markerDetails = buildDetail(markerContent, fullLabel, icon, block.getWorld().getName());
         POIMarker marker = POIMarker.builder().position(pos).label(fullLabel).icon(icon, anchor).maxDistance(100000).detail(markerDetails).build();
         featureProvider.getMarkerSet().get(block.getWorld()).put(id, marker);
         // Persist immediately: the shutdown save only covers a clean stop, so without
@@ -158,21 +162,36 @@ public class SignWatcher implements Listener {
     }
 
     /**
-     * Builds the HTML content for a marker's detail popup using the provided information.
+     * Renders a marker's popup HTML from the user-editable template in the plugin's data folder.
+     * <p>
+     * The values that no marker field retains - the individual sign lines, author and creation
+     * time - are appended as a comment so the template can be reapplied to this marker later
+     * without losing them.
      *
-     * @param content {@link MarkerContent} object containing label lines, position, timestamp and author
-     * @return HTML string suitable for use as the marker detail content (ready to be passed to BlueMap)
+     * @param content   the sign's label lines, position, timestamp and author
+     * @param label     the joined label as shown by the marker itself
+     * @param icon      the resolved icon path, e.g. {@code markers/portal.svg}
+     * @param worldName the world the sign is in
+     * @return the detail HTML, ready for {@code POIMarker.Builder#detail}
      */
-    private String buildMarkerContent(MarkerContent content) {
-        return String.format(HTML_TEMPLATE,
-                content.getLabel1(),
-                content.getLabel2(),
-                content.getLabel3(),
-                content.getX(),
-                content.getY(),
-                content.getZ(),
-                content.getTimestamp(),
-                content.getAuthor());
+    private String buildDetail(MarkerContent content, String label, String icon, String worldName) {
+        Map<String, String> values = new LinkedHashMap<>();
+        values.put("label", label);
+        values.put("label1", content.getLabel1());
+        values.put("label2", content.getLabel2());
+        values.put("label3", content.getLabel3());
+        values.put("x", String.valueOf(content.getX()));
+        values.put("y", String.valueOf(content.getY()));
+        values.put("z", String.valueOf(content.getZ()));
+        values.put("position", content.getX() + " " + content.getY() + " " + content.getZ());
+        values.put("timestamp", content.getTimestamp());
+        values.put("author", content.getAuthor());
+        values.put("icon", icon);
+        values.put("world", worldName);
+
+        Path dataFolder = featureProvider.getPlugin().getDataFolder().toPath();
+        String template = DetailTemplate.readTemplate(dataFolder, featureProvider.getLogger());
+        return DetailTemplate.render(template, values) + DetailTemplate.storedComment(values);
     }
 
     /**

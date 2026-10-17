@@ -3,6 +3,7 @@ package net.immortalmc.bluemap_sign_markers;
 import de.bluecolored.bluemap.api.BlueMapAPI;
 import de.bluecolored.bluemap.api.markers.MarkerSet;
 import net.immortalmc.bluemap_sign_markers.command.SignMarkersCommand;
+import net.immortalmc.bluemap_sign_markers.helpers.DetailTemplate;
 import net.immortalmc.bluemap_sign_markers.helpers.IconHelper;
 import net.immortalmc.bluemap_sign_markers.helpers.MarkerHelper;
 import net.immortalmc.bluemap_sign_markers.watcher.SignWatcher;
@@ -74,6 +75,8 @@ public class SignMarkers extends JavaPlugin implements FeatureProvider {
     public void onEnable() {
         logger = getLogger();
         markerHelper = new MarkerHelper(this);
+        // Seeded before anything can render a popup, and never overwritten afterwards.
+        DetailTemplate.ensureTemplateFile(getDataFolder().toPath(), logger);
         registerCommands();
         BlueMapAPI.onEnable(api -> {
                     try {
