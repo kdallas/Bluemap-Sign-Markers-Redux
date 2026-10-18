@@ -5,6 +5,9 @@
 *.ipr
 out/
 
+### VS Code ###
+.vscode/
+
 ### Java / Build Artifacts ###
 *.class
 *.jar
