@@ -44,9 +44,13 @@ import static net.immortalmc.bluemap_sign_markers.Constants.IMAGE_PATH;
  * The first candidate that is a regular file wins. When nothing matches, the bundled
  * {@code ban_white} icon is found the same way.
  *
+ * <p>A token may name one sub-directory explicitly, as {@code [set2/tree]}. That searches only
+ * the named folder, skipping the normal order; if the folder or file is missing, the fallback is
+ * used rather than silently trying elsewhere.
+ *
  * <p>The token is player input and is treated as such: it must be a plain file name inside
- * {@code markers/} or one of its sub-directories, with no path separators, no URL-significant
- * characters and no control characters. Anything else resolves to the fallback.
+ * {@code markers/} or one of its sub-directories, with at most one path separator, no
+ * URL-significant characters and no control characters. Anything else resolves to the fallback.
  *
  * <p>{@link #resolve} never returns {@code null} and never propagates an I/O failure. An icon
  * whose size cannot be determined is still used, anchored at {@link #DEFAULT_ANCHOR}, with a
@@ -201,19 +205,48 @@ public final class IconResolver {
             return null;
         }
 
-        // "/" and "\" would make the token a path; ":" allows a Windows drive-relative path
-        // ("C:secret") and an NTFS alternate data stream; "%", "?" and "#" would be significant to
-        // the browser that fetches the resulting icon URL; control characters only ever arrive
-        // from a client that is not typing, and would end up in the log message.
-        if (trimmed.equals(".") || trimmed.equals("..") || containsUnsafeCharacter(trimmed)) {
+        if (!isValidToken(trimmed)) {
             logger.warning("Ignoring sign icon name '" + printable(trimmed)
-                    + "': icon names must be plain file names in " + IMAGE_PATH);
+                    + "': use a file name, optionally in one sub-directory (for example set2/tree)");
             return null;
         }
 
         return trimmed;
     }
 
+    /**
+     * Whether the token is a plain file name, or one sub-directory prefix and a file name.
+     * <p>
+     * The slash is player input too: only one is allowed (the search is one level deep anyway),
+     * and each half is validated as a name on its own.
+     */
+    private static boolean isValidToken(String token) {
+        int slash = token.indexOf('/');
+        if (slash < 0) return isSafeName(token);
+
+        return slash > 0
+                && slash < token.length() - 1
+                && token.indexOf('/', slash + 1) < 0
+                && isSafeName(token.substring(0, slash))
+                && isSafeName(token.substring(slash + 1));
+    }
+
+    private static boolean isSafeName(String name) {
+        return !name.isEmpty()
+                && !name.equals(".")
+                && !name.equals("..")
+                && !containsUnsafeCharacter(name);
+    }
+
+    /**
+     * Characters that must not appear inside one name segment. A single slash is allowed in the
+     * token as the folder separator, but a slash inside a segment would add another level.
+     * <p>
+     * A backslash is a separator on Windows; ":" allows a drive-relative path ("C:secret") and
+     * an NTFS alternate data stream; "%", "?" and "#" are significant to the browser that
+     * fetches the icon URL; control characters only arrive from a client that is not typing and
+     * would end up in the log message.
+     */
     private static boolean containsUnsafeCharacter(String token) {
         for (int i = 0; i < token.length(); i++) {
             char c = token.charAt(i);
@@ -244,22 +277,37 @@ public final class IconResolver {
     }
 
     /**
-     * First icon matching {@code token}.
+     * First icon matching {@code token}, which may carry an explicit {@code folder/} prefix.
      * <p>
-     * Formats are the outer loop and directories the inner one: every directory is asked for
-     * {@code <token>.svg} before any is asked for {@code <token>.webp}, and so on. Directories
-     * themselves are tried root first, then sorted by name.
+     * Without a prefix, formats are the outer loop and directories the inner one: every directory
+     * is asked for {@code <name>.svg} before any is asked for {@code <name>.webp}, and so on.
+     * Directories themselves are tried root first, then sorted by name. With a prefix only that
+     * one folder is searched.
      *
      * @return the match, or {@code null} when no candidate is a regular file
      */
     private static IconRef find(Path iconDir, String token, Logger logger) {
-        List<Path> dirs = searchDirectories(iconDir, logger);
+        int slash = token.indexOf('/');
+        String folder = slash < 0 ? null : token.substring(0, slash);
+        String name = slash < 0 ? token : token.substring(slash + 1);
 
-        for (String fileName : candidates(token)) {
+        List<Path> dirs;
+        if (folder == null) {
+            dirs = searchDirectories(iconDir, logger);
+        } else {
+            Path dir = iconDir.resolve(folder);
+            // sanitize() guarantees a plain one-level folder name, so this only fails for an
+            // unknown folder or a non-directory. An explicit folder means exactly that folder:
+            // a miss falls back rather than quietly resolving the same name elsewhere.
+            if (!isDirectChild(iconDir, dir) || !Files.isDirectory(dir)) return null;
+            dirs = List.of(dir);
+        }
+
+        for (String fileName : candidates(name)) {
             for (Path dir : dirs) {
                 Path file = dir.resolve(fileName);
-                // Defence in depth: the token cannot contain a separator, so this can only fail
-                // if that check is ever loosened. It costs one normalization.
+                // Defence in depth: each half is a plain name, so this can only fail if that
+                // check is ever loosened. It costs one normalization.
                 if (!isDirectChild(dir, file) || !Files.isRegularFile(file)) continue;
 
                 String relative = dir.equals(iconDir)

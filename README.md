@@ -71,10 +71,13 @@ So within one folder `[portal]` uses `portal.svg` if present, then `portal.webp`
 
 - `[portal.svg]` uses that exact file. An explicit name always wins over the format order, so
   `[portal.png]` picks the PNG even when an SVG of the same name is present.
+- `[set2/tree]` searches only `set2/`, skipping the folder order; the usual format order still
+  applies within it. The prefix must be a direct sub-folder of `markers/`; if that folder or file
+  is missing, the fallback icon is used rather than trying elsewhere.
 - `[portal]` still matches a file whose own name contains a dot (`my.icon.png` for `[my.icon]`)
   after the extension probes, as it did before SVG support.
 - If nothing matches, the bundled `ban_white` icon is used.
-- The token is case-insensitive, but the file name must be lower-case on case-sensitive
+- The token is case-insensitive, but file and folder names must be lower-case on case-sensitive
   filesystems.
 
 Format is compared before folder, so an icon in `web/markers/` only wins over a bundled file of
@@ -97,7 +100,8 @@ web/markers/custom1/portal.webp
 web/markers/custom1/harbour.svg
 ```
 
-`[portal]` and `[harbour]` then resolve from `custom1/`. A few consequences of the lookup order
+`[portal]` and `[harbour]` then resolve from `custom1/`. To bypass the folder order entirely,
+prefix the name with the folder: `[custom1/harbour]`. A few consequences of the lookup order
 above:
 
 - Only direct sub-folders of `markers/` are searched; `custom1/deep/icon.png` is not found.
