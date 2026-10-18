@@ -11,9 +11,11 @@ public class Constants {
      */
     public static final String IMAGE_PATH = "markers/";
     /**
-     * Resource folder inside the plugin JAR where marker images are located.
+     * Resource folder inside the plugin JAR where marker images are located. It mirrors the
+     * webroot's marker folder, so bundled icon sets keep their sub-directory names
+     * ({@code markers/set1/...} is copied to {@code web/markers/set1/...}).
      */
-    public static final String RES_FOLDER = IMAGE_PATH + "icons";
+    public static final String RES_FOLDER = "markers";
     /**
      * Prefix used when creating per-world marker set filenames.
      */

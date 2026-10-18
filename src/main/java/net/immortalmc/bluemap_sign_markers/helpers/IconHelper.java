@@ -18,8 +18,10 @@ public class IconHelper {
 
 
     /**
-     * Copies PNG and SVG marker resources from the plugin JAR (inside {@code RES_FOLDER}) into the
-     * target BlueMap webroot under {@code IMAGE_PATH}. Existing files are not overwritten.
+     * Copies PNG, SVG and WebP marker resources from the plugin JAR (inside {@code RES_FOLDER})
+     * into the target BlueMap webroot under {@code IMAGE_PATH}. Sub-directories are preserved, so
+     * bundled sets land beside the user's own ({@code web/markers/set1/...}). Existing files are
+     * not overwritten.
      *
      * @param jar the plugin JAR file to read resources from
      * @param webRoot the BlueMap webroot path to copy files into
@@ -36,6 +38,7 @@ public class IconHelper {
             return false;
         }
 
+        Path resourceRoot = Path.of(RES_FOLDER);
         Enumeration<JarEntry> entries = jar.entries();
 
         while (entries.hasMoreElements()) {
@@ -47,7 +50,7 @@ public class IconHelper {
                     && IconResolver.isSupportedIconFile(entryName)) {
 
                 Path entryPath = Path.of(entryName);
-                Path relative = entryPath.subpath(2, entryPath.getNameCount());
+                Path relative = resourceRoot.relativize(entryPath);
                 File outFile = webRoot.resolve(IMAGE_PATH).resolve(relative).toFile();
 
                 if (outFile.exists()) {

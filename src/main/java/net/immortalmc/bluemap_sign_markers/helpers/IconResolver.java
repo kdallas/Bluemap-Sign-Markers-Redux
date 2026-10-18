@@ -5,12 +5,15 @@ import com.flowpowered.math.vector.Vector2i;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -29,19 +32,21 @@ import static net.immortalmc.bluemap_sign_markers.Constants.IMAGE_PATH;
  *
  * <p>Resolution order:
  * <ol>
- *   <li>{@code markers/<token>} verbatim, when the token carries an extension (a dot after the
- *       first character). {@code [portal.svg]} therefore means the file {@code portal.svg} and
- *       never {@code portal.svg.png};</li>
- *   <li>{@code markers/<token>.svg};</li>
- *   <li>{@code markers/<token>.png}.</li>
+ *   <li><b>Format</b>: {@code .svg}, then {@code .webp}, then {@code .png}. This outranks the
+ *       directory: an SVG in a set folder beats a PNG in the root, because the formats are
+ *       alternatives for the same icon rather than different icons;</li>
+ *   <li><b>Directory</b>, within one format: the {@code markers/} root first, then each direct
+ *       sub-directory in case-insensitive natural order ({@code set1/}, {@code set2/}, ...,
+ *       {@code set10/} after {@code set9/}).</li>
  * </ol>
- * The first candidate that is a regular file wins, so an SVG beats a PNG of the same name and a
- * name the player spells out in full beats both. When nothing matches, the bundled
- * {@code ban_white} icon is used.
+ * A token carrying an extension is also tried verbatim before any of that, so
+ * {@code [portal.svg]} names the file {@code portal.svg} and never probes {@code portal.svg.png}.
+ * The first candidate that is a regular file wins. When nothing matches, the bundled
+ * {@code ban_white} icon is found the same way.
  *
  * <p>The token is player input and is treated as such: it must be a plain file name inside
- * {@code markers/}, with no path separators, no URL-significant characters and no control
- * characters. Anything else resolves to the fallback.
+ * {@code markers/} or one of its sub-directories, with no path separators, no URL-significant
+ * characters and no control characters. Anything else resolves to the fallback.
  *
  * <p>{@link #resolve} never returns {@code null} and never propagates an I/O failure. An icon
  * whose size cannot be determined is still used, anchored at {@link #DEFAULT_ANCHOR}, with a
@@ -53,6 +58,7 @@ public final class IconResolver {
     private static final String FALLBACK_NAME = "ban_white";
 
     private static final String SVG_EXTENSION = ".svg";
+    private static final String WEBP_EXTENSION = ".webp";
     private static final String PNG_EXTENSION = ".png";
 
     /**
@@ -152,16 +158,10 @@ public final class IconResolver {
         String safeToken = sanitize(token, logger);
 
         if (safeToken != null) {
-            for (String fileName : candidates(safeToken)) {
-                Path file = iconDir.resolve(fileName);
-                // Defence in depth: the token cannot contain a separator, so this can only fail
-                // if that check is ever loosened. It costs one normalization.
-                if (!isDirectChild(iconDir, file) || !Files.isRegularFile(file)) continue;
-                return new IconRef(IMAGE_PATH + fileName, safeToken,
-                        anchorFor(file, fileName, logger));
-            }
+            IconRef found = find(iconDir, safeToken, logger);
+            if (found != null) return found;
             logger.fine("No icon file for sign token '" + safeToken + "' in " + iconDir
-                    + "; using '" + FALLBACK_NAME + "'");
+                    + " or its sub-directories; using '" + FALLBACK_NAME + "'");
         }
 
         return fallback(iconDir, logger);
@@ -172,11 +172,13 @@ public final class IconResolver {
      * {@link IconHelper} so the supported set is defined once.
      *
      * @param fileName a plain file name, e.g. {@code portal.svg}
-     * @return true for {@code .png} and {@code .svg}, case-insensitively
+     * @return true for {@code .png}, {@code .svg} and {@code .webp}, case-insensitively
      */
     public static boolean isSupportedIconFile(String fileName) {
         String lower = fileName.toLowerCase(Locale.ROOT);
-        return lower.endsWith(PNG_EXTENSION) || lower.endsWith(SVG_EXTENSION);
+        return lower.endsWith(SVG_EXTENSION)
+                || lower.endsWith(WEBP_EXTENSION)
+                || lower.endsWith(PNG_EXTENSION);
     }
 
     // ------------------------------------------------------------------
@@ -224,19 +226,134 @@ public final class IconResolver {
     }
 
     /**
-     * File names to probe, in order.
+     * File names to probe, in priority order.
      * <p>
      * A token carrying an extension is a file name the player spelled out, so it is probed
      * verbatim first. The extension probes still follow it so that an icon whose own name
      * contains a dot ({@code [my.icon]} for {@code my.icon.png}) keeps working as it did before
-     * SVG support existed; they only ever run after the verbatim probe has missed.
+     * SVG support existed; they only ever run after the verbatim probe has missed. The order is
+     * the format priority: SVG, then WebP, then PNG.
      */
     private static List<String> candidates(String token) {
-        List<String> fileNames = new ArrayList<>(3);
+        List<String> fileNames = new ArrayList<>(4);
         if (token.indexOf('.', 1) >= 0) fileNames.add(token);
         fileNames.add(token + SVG_EXTENSION);
+        fileNames.add(token + WEBP_EXTENSION);
         fileNames.add(token + PNG_EXTENSION);
         return fileNames;
+    }
+
+    /**
+     * First icon matching {@code token}.
+     * <p>
+     * Formats are the outer loop and directories the inner one: every directory is asked for
+     * {@code <token>.svg} before any is asked for {@code <token>.webp}, and so on. Directories
+     * themselves are tried root first, then sorted by name.
+     *
+     * @return the match, or {@code null} when no candidate is a regular file
+     */
+    private static IconRef find(Path iconDir, String token, Logger logger) {
+        List<Path> dirs = searchDirectories(iconDir, logger);
+
+        for (String fileName : candidates(token)) {
+            for (Path dir : dirs) {
+                Path file = dir.resolve(fileName);
+                // Defence in depth: the token cannot contain a separator, so this can only fail
+                // if that check is ever loosened. It costs one normalization.
+                if (!isDirectChild(dir, file) || !Files.isRegularFile(file)) continue;
+
+                String relative = dir.equals(iconDir)
+                        ? fileName
+                        : dir.getFileName() + "/" + fileName;
+                return new IconRef(IMAGE_PATH + relative, token, anchorFor(file, fileName, logger));
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The directories to search, in priority order: the icon root, then its direct
+     * sub-directories sorted by name.
+     * <p>
+     * Only one level is searched. A sub-directory exists to group a set of icons, not to build a
+     * tree, and a bounded search keeps a stray folder full of images from slowing every sign
+     * down.
+     */
+    private static List<Path> searchDirectories(Path iconDir, Logger logger) {
+        List<Path> dirs = new ArrayList<>();
+        if (!Files.isDirectory(iconDir)) return dirs;
+
+        dirs.add(iconDir);
+
+        List<Path> subDirs = new ArrayList<>();
+        try (DirectoryStream<Path> children = Files.newDirectoryStream(iconDir, Files::isDirectory)) {
+            children.forEach(subDirs::add);
+        } catch (IOException e) {
+            // The root is still usable, so return it rather than losing every icon over a
+            // listing failure.
+            logger.warning("Cannot list icon sub-directories in " + iconDir + ": " + e.getMessage());
+            return dirs;
+        }
+
+        subDirs.sort(Comparator.comparing((Path dir) -> dir.getFileName().toString(), DIRECTORY_ORDER));
+        dirs.addAll(subDirs);
+        return dirs;
+    }
+
+    /**
+     * Directory names in the order a person reads them: case-insensitively, with runs of digits
+     * compared by value. A plain lexicographic sort would put {@code set10} before {@code set2},
+     * which is almost never what a numbered set means.
+     */
+    private static final Comparator<String> DIRECTORY_ORDER = IconResolver::compareNatural;
+
+    private static int compareNatural(String a, String b) {
+        int i = 0;
+        int j = 0;
+
+        while (i < a.length() && j < b.length()) {
+            char ca = a.charAt(i);
+            char cb = b.charAt(j);
+
+            if (Character.isDigit(ca) && Character.isDigit(cb)) {
+                int endA = endOfDigits(a, i);
+                int endB = endOfDigits(b, j);
+                String digitsA = stripLeadingZeros(a.substring(i, endA));
+                String digitsB = stripLeadingZeros(b.substring(j, endB));
+
+                // Equal-length digit strings compare lexicographically exactly as their values
+                // do; the length difference is what makes 9 < 10.
+                if (digitsA.length() != digitsB.length()) {
+                    return Integer.compare(digitsA.length(), digitsB.length());
+                }
+                int cmp = digitsA.compareTo(digitsB);
+                if (cmp != 0) return cmp;
+
+                i = endA;
+                j = endB;
+                continue;
+            }
+
+            int cmp = Character.compare(Character.toLowerCase(ca), Character.toLowerCase(cb));
+            if (cmp != 0) return cmp;
+            i++;
+            j++;
+        }
+
+        int cmp = Integer.compare(a.length(), b.length());
+        return cmp != 0 ? cmp : a.compareTo(b);
+    }
+
+    private static int endOfDigits(String s, int start) {
+        int end = start;
+        while (end < s.length() && Character.isDigit(s.charAt(end))) end++;
+        return end;
+    }
+
+    private static String stripLeadingZeros(String digits) {
+        int start = 0;
+        while (start < digits.length() - 1 && digits.charAt(start) == '0') start++;
+        return digits.substring(start);
     }
 
     private static boolean isDirectChild(Path dir, Path file) {
@@ -245,23 +362,18 @@ public final class IconResolver {
     }
 
     private static IconRef fallback(Path iconDir, Logger logger) {
-        String fileName = FALLBACK_NAME + PNG_EXTENSION;
-        Vector2i anchor = DEFAULT_ANCHOR;
-
         if (iconDir != null) {
-            Path file = iconDir.resolve(fileName);
-            if (Files.isRegularFile(file)) {
-                anchor = anchorFor(file, fileName, logger);
-            } else {
-                // IconHelper.copyMarkers copies it at startup, so this means the webroot was
-                // edited or the copy failed. The marker is still created: the reference is
-                // correct and the file may reappear.
-                logger.warning("Fallback icon " + file + " is missing; markers will show a "
-                        + "broken image until it is restored");
-            }
+            IconRef found = find(iconDir, FALLBACK_NAME, logger);
+            if (found != null) return found;
+
+            // IconHelper.copyMarkers copies it at startup, so this means the webroot was
+            // edited or the copy failed. The marker is still created: the reference is
+            // correct and the file may reappear.
+            logger.warning("Fallback icon '" + FALLBACK_NAME + "' is missing from " + iconDir
+                    + " and its sub-directories; markers will show a broken image until it is restored");
         }
 
-        return new IconRef(IMAGE_PATH + fileName, FALLBACK_NAME, anchor);
+        return new IconRef(IMAGE_PATH + FALLBACK_NAME + PNG_EXTENSION, FALLBACK_NAME, DEFAULT_ANCHOR);
     }
 
     /**
@@ -269,16 +381,22 @@ public final class IconResolver {
      * cannot be determined.
      */
     private static Vector2i anchorFor(Path file, String fileName, Logger logger) {
-        int[] size = fileName.toLowerCase(Locale.ROOT).endsWith(SVG_EXTENSION)
-                ? svgSize(file)
-                : rasterSize(file);
+        String lower = fileName.toLowerCase(Locale.ROOT);
+        int[] size;
+        if (lower.endsWith(SVG_EXTENSION)) {
+            size = svgSize(file);
+        } else if (lower.endsWith(WEBP_EXTENSION)) {
+            size = webpSize(file);
+        } else {
+            size = rasterSize(file);
+        }
 
         if (size == null) {
             // An icon that exists is used even when it cannot be measured. A wrong anchor moves
             // the icon; refusing the icon would lose the marker.
             logger.warning("Cannot determine the size of icon " + file + "; anchoring it at "
-                    + DEFAULT_ANCHOR + ". Give the file an explicit width and height (or use a "
-                    + "PNG) for a centred marker");
+                    + DEFAULT_ANCHOR + ". Give an SVG an explicit width and height, or use a PNG "
+                    + "or WebP, for a centred marker");
             return DEFAULT_ANCHOR;
         }
 
@@ -321,6 +439,104 @@ public final class IconResolver {
             // A truncated or corrupt header can surface as either; both mean "no size known".
             return null;
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Sizing: WebP
+    // ------------------------------------------------------------------
+
+    /**
+     * Dimensions of a WebP, read from its RIFF chunk headers without decoding the image.
+     * <p>
+     * The JDK ships no WebP {@link ImageReader}, so {@link #rasterSize} cannot measure one and
+     * every WebP icon would otherwise be anchored at {@link #DEFAULT_ANCHOR}. The size is stated
+     * up front in one of three chunk types: {@code VP8X} (extended), {@code VP8L} (lossless) or
+     * {@code VP8 } (lossy). Only that chunk is read; unknown chunks before it ({@code ICCP},
+     * {@code EXIF}, {@code ALPH}) are skipped by length, so this remains a header-only check.
+     *
+     * @return {width, height}, or {@code null} when the file is not a WebP or its header is
+     *         truncated or malformed
+     */
+    private static int[] webpSize(Path file) {
+        try (InputStream in = new BufferedInputStream(Files.newInputStream(file))) {
+            byte[] riff = in.readNBytes(12);
+            if (riff.length < 12 || !matchesAscii(riff, 0, "RIFF") || !matchesAscii(riff, 8, "WEBP")) {
+                return null;
+            }
+
+            while (true) {
+                byte[] header = in.readNBytes(8);
+                if (header.length < 8) return null;
+
+                long chunkSize = u32(header, 4);
+
+                if (matchesAscii(header, 0, "VP8X")) {
+                    if (chunkSize < 10) return null;
+                    byte[] payload = in.readNBytes(10);
+                    if (payload.length < 10) return null;
+                    // Canvas size, stored minus one, 24 bits little-endian.
+                    return sizeOrNull(u24(payload, 4) + 1, u24(payload, 7) + 1);
+                }
+
+                if (matchesAscii(header, 0, "VP8L")) {
+                    if (chunkSize < 5) return null;
+                    byte[] payload = in.readNBytes(5);
+                    if (payload.length < 5 || (payload[0] & 0xFF) != 0x2F) return null;
+                    // 14 bits of width-1, then 14 bits of height-1, packed little-endian.
+                    long bits = u32(payload, 1);
+                    return sizeOrNull((int) (bits & 0x3FFF) + 1,
+                            (int) ((bits >>> 14) & 0x3FFF) + 1);
+                }
+
+                if (matchesAscii(header, 0, "VP8 ")) {
+                    if (chunkSize < 10) return null;
+                    byte[] payload = in.readNBytes(10);
+                    if (payload.length < 10
+                            || (payload[3] & 0xFF) != 0x9D
+                            || (payload[4] & 0xFF) != 0x01
+                            || (payload[5] & 0xFF) != 0x2A) {
+                        return null;
+                    }
+                    // Frame tag, then the 3-byte start code, then 14-bit dimensions.
+                    return sizeOrNull(u16(payload, 6) & 0x3FFF, u16(payload, 8) & 0x3FFF);
+                }
+
+                // RIFF chunks are padded to an even length. skipNBytes makes full progress or
+                // throws, so a truncated or hostile file cannot spin this loop.
+                in.skipNBytes(chunkSize + (chunkSize & 1L));
+            }
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    private static boolean matchesAscii(byte[] data, int offset, String ascii) {
+        if (offset + ascii.length() > data.length) return false;
+        for (int i = 0; i < ascii.length(); i++) {
+            if ((data[offset + i] & 0xFF) != ascii.charAt(i)) return false;
+        }
+        return true;
+    }
+
+    private static int u16(byte[] data, int offset) {
+        return (data[offset] & 0xFF) | ((data[offset + 1] & 0xFF) << 8);
+    }
+
+    private static int u24(byte[] data, int offset) {
+        return (data[offset] & 0xFF)
+                | ((data[offset + 1] & 0xFF) << 8)
+                | ((data[offset + 2] & 0xFF) << 16);
+    }
+
+    private static long u32(byte[] data, int offset) {
+        return (data[offset] & 0xFFL)
+                | ((data[offset + 1] & 0xFFL) << 8)
+                | ((data[offset + 2] & 0xFFL) << 16)
+                | ((data[offset + 3] & 0xFFL) << 24);
+    }
+
+    private static int[] sizeOrNull(int width, int height) {
+        return isValidSize(width, height) ? new int[] { width, height } : null;
     }
 
     // ------------------------------------------------------------------
