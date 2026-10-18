@@ -115,6 +115,27 @@ Icons are resolved when a sign is placed, so a newly added file is used by the n
 any reload. For an existing marker, `/signmarkers regenerate <id or label>` re-reads its sign and
 resolves the icon again.
 
+## Example
+
+The example below creates a marker on your map with the `star` icon assigned.
+
+First, you build the sign
+
+![sign1](example1.png)
+
+After you complete it, the first line will switch to `> map marker <`. This indicates that placing
+the marker was successful.
+
+![sign2](example2.png)
+
+After a while, you will see the marker on your BlueMap
+
+![sign3](example3.png)
+
+And when you click it, the popup containing your sign description will appear
+
+![sign4](example4.png)
+
 ## Commands
 
 `/signmarkers` manages a world's marker set. Signs create and remove markers on their own; these
@@ -183,34 +204,71 @@ that a `<style>` block in the template applies document-wide while the popup is 
 repeated in every marker's stored detail - fine for a few dozen markers, worth trimming for
 hundreds.
 
-## Markers Included by Default
-These are the names that are available automatically for the markers, plus the corresponding icons. Just use any of the values between brackets - `[` and `]`, e.g. `[portal]` - to place the marker on the **BlueMap**.
-It does not matter if you use lowercase or uppercase; the plugin will handle it.
+## Markers included by default
 
-The table below lists `set1/`. A second bundled set, `set2/`, adds icons such as `bank`, `bed`,
-`cart`, `chest`, `compass`, the coloured `*flag` icons, and the `gold`/`silver`/`bronze` medal
-and star icons.
+These are the names that are available automatically for the markers, plus the corresponding
+icons. Just use any of the values between brackets - `[` and `]`, e.g. `[portal]` - to place the
+marker on the **BlueMap**. It does not matter if you use lowercase or uppercase; the plugin will
+handle it.
 
-| Name             | Icon                                                                    |     | Name              | Icon                                                                     |
-| ---------------- | ----------------------------------------------------------------------- | --- | ----------------- | ------------------------------------------------------------------------ |
-| `ban_black`      | ![ban_black](src/main/resources/markers/set1/ban_black.webp)            |     | `mansion`         | ![mansion](src/main/resources/markers/set1/mansion.webp)                 |
-| `ban_blue`       | ![ban_blue](src/main/resources/markers/set1/ban_blue.webp)              |     | `mineshaft`       | ![mineshaft](src/main/resources/markers/set1/mineshaft.webp)             |
-| `ban_brown`      | ![ban_brown](src/main/resources/markers/set1/ban_brown.webp)            |     | `monument`        | ![monument](src/main/resources/markers/set1/monument.webp)               |
-| `ban_cyan`       | ![ban_cyan](src/main/resources/markers/set1/ban_cyan.webp)              |     | `ocean_ruins`     | ![ocean_ruins](src/main/resources/markers/set1/ocean_ruins.webp)         |
-| `ban_gray`       | ![ban_gray](src/main/resources/markers/set1/ban_gray.webp)              |     | `pickaxe`         | ![pickaxe](src/main/resources/markers/set1/pickaxe.webp)                 |
-| `ban_green`      | ![ban_green](src/main/resources/markers/set1/ban_green.webp)            |     | `portal`          | ![portal](src/main/resources/markers/set1/portal.webp)                   |
-| `ban_light_blue` | ![ban_light_blue](src/main/resources/markers/set1/ban_light_blue.webp)  |     | `spawner`         | ![spawner](src/main/resources/markers/set1/spawner.webp)                 |
-| `ban_light_gray` | ![ban_light_gray](src/main/resources/markers/set1/ban_light_gray.webp)  |     | `target_point`    | ![target_point](src/main/resources/markers/set1/target_point.webp)       |
-| `ban_lime`       | ![ban_lime](src/main/resources/markers/set1/ban_lime.webp)              |     | `target_x`        | ![target_x](src/main/resources/markers/set1/target_x.webp)               |
-| `ban_magenta`    | ![ban_magenta](src/main/resources/markers/set1/ban_magenta.webp)        |     | `treasure_x`      | ![treasure_x](src/main/resources/markers/set1/treasure_x.webp)           |
-| `ban_orange`     | ![ban_orange](src/main/resources/markers/set1/ban_orange.webp)          |     | `tree`            | ![tree](src/main/resources/markers/set1/tree.webp)                       |
-| `ban_pink`       | ![ban_pink](src/main/resources/markers/set1/ban_pink.webp)              |     | `trial`           | ![trial](src/main/resources/markers/set1/trial.webp)                     |
-| `ban_purple`     | ![ban_purple](src/main/resources/markers/set1/ban_purple.webp)          |     | `village_desert`  | ![village_desert](src/main/resources/markers/set1/village_desert.webp)   |
-| `ban_red`        | ![ban_red](src/main/resources/markers/set1/ban_red.webp)                |     | `village_plains`  | ![village_plains](src/main/resources/markers/set1/village_plains.webp)   |
-| `ban_white`      | ![ban_white](src/main/resources/markers/set1/ban_white.webp)            |     | `village_savanna` | ![village_savanna](src/main/resources/markers/set1/village_savanna.webp) |
-| `ban_yellow`     | ![ban_yellow](src/main/resources/markers/set1/ban_yellow.webp)          |     | `village_snow`    | ![village_snow](src/main/resources/markers/set1/village_snow.webp)       |
-| `camp`           | ![camp](src/main/resources/markers/set1/camp.webp)                      |     | `village_taiga`   | ![village_taiga](src/main/resources/markers/set1/village_taiga.webp)     |
-| `desert_temple`  | ![desert_temple](src/main/resources/markers/set1/desert_temple.webp)    |     | `witch_hut`       | ![witch_hut](src/main/resources/markers/set1/witch_hut.webp)             | 
+### Marker names
 
+#### Set 1 - `set1/`
 
-Where these images are from the vanilla Minecraft map icons, or the [Map Icons Resource Pack](https://modrinth.com/resourcepack/map-icons).
+| Name              | Icon                                                                     |     | Name              | Icon                                                                     |     | Name              | Icon                                                                     |
+| ----------------- | ------------------------------------------------------------------------ | --- | ----------------- | ------------------------------------------------------------------------ | --- | ----------------- | ------------------------------------------------------------------------ |
+| `ancient_city`    | ![ancient_city](src/main/resources/markers/set1/ancient_city.webp)       |     | `ban_purple`      | ![ban_purple](src/main/resources/markers/set1/ban_purple.webp)           |     | `target_point`    | ![target_point](src/main/resources/markers/set1/target_point.webp)       |
+| `ban_black`       | ![ban_black](src/main/resources/markers/set1/ban_black.webp)             |     | `ban_red`         | ![ban_red](src/main/resources/markers/set1/ban_red.webp)                 |     | `target_x`        | ![target_x](src/main/resources/markers/set1/target_x.webp)               |
+| `ban_blue`        | ![ban_blue](src/main/resources/markers/set1/ban_blue.webp)               |     | `ban_white`       | ![ban_white](src/main/resources/markers/set1/ban_white.webp)             |     | `treasure_x`      | ![treasure_x](src/main/resources/markers/set1/treasure_x.webp)           |
+| `ban_brown`       | ![ban_brown](src/main/resources/markers/set1/ban_brown.webp)             |     | `ban_yellow`      | ![ban_yellow](src/main/resources/markers/set1/ban_yellow.webp)           |     | `tree`            | ![tree](src/main/resources/markers/set1/tree.webp)                       |
+| `ban_cyan`        | ![ban_cyan](src/main/resources/markers/set1/ban_cyan.webp)               |     | `camp`            | ![camp](src/main/resources/markers/set1/camp.webp)                       |     | `trial`           | ![trial](src/main/resources/markers/set1/trial.webp)                     |
+| `ban_gray`        | ![ban_gray](src/main/resources/markers/set1/ban_gray.webp)               |     | `desert_temple`   | ![desert_temple](src/main/resources/markers/set1/desert_temple.webp)     |     | `village_desert`  | ![village_desert](src/main/resources/markers/set1/village_desert.webp)   |
+| `ban_green`       | ![ban_green](src/main/resources/markers/set1/ban_green.webp)             |     | `mansion`         | ![mansion](src/main/resources/markers/set1/mansion.webp)                 |     | `village_plains`  | ![village_plains](src/main/resources/markers/set1/village_plains.webp)   |
+| `ban_light_blue`  | ![ban_light_blue](src/main/resources/markers/set1/ban_light_blue.webp)   |     | `mineshaft`       | ![mineshaft](src/main/resources/markers/set1/mineshaft.webp)             |     | `village_savanna` | ![village_savanna](src/main/resources/markers/set1/village_savanna.webp) |
+| `ban_light_gray`  | ![ban_light_gray](src/main/resources/markers/set1/ban_light_gray.webp)   |     | `monument`        | ![monument](src/main/resources/markers/set1/monument.webp)               |     | `village_snow`    | ![village_snow](src/main/resources/markers/set1/village_snow.webp)       |
+| `ban_lime`        | ![ban_lime](src/main/resources/markers/set1/ban_lime.webp)               |     | `ocean_ruins`     | ![ocean_ruins](src/main/resources/markers/set1/ocean_ruins.webp)         |     | `village_taiga`   | ![village_taiga](src/main/resources/markers/set1/village_taiga.webp)     |
+| `ban_magenta`     | ![ban_magenta](src/main/resources/markers/set1/ban_magenta.webp)         |     | `pickaxe`         | ![pickaxe](src/main/resources/markers/set1/pickaxe.webp)                 |     | `witch_hut`       | ![witch_hut](src/main/resources/markers/set1/witch_hut.webp)             |
+| `ban_orange`      | ![ban_orange](src/main/resources/markers/set1/ban_orange.webp)           |     | `portal`          | ![portal](src/main/resources/markers/set1/portal.webp)                   |     |                   |                                                                          |
+| `ban_pink`        | ![ban_pink](src/main/resources/markers/set1/ban_pink.webp)               |     | `spawner`         | ![spawner](src/main/resources/markers/set1/spawner.webp)                 |     |                   |                                                                          |
+
+#### Set 2 - `set2/`
+
+| Name           | Icon                                                               |     | Name           | Icon                                                               |     | Name           | Icon                                                               |
+| -------------- | ------------------------------------------------------------------ | --- | -------------- | ------------------------------------------------------------------ | --- | -------------- | ------------------------------------------------------------------ |
+| `anchor`       | ![anchor](src/main/resources/markers/set2/anchor.webp)             |     | `down`         | ![down](src/main/resources/markers/set2/down.webp)                 |     | `pointup`      | ![pointup](src/main/resources/markers/set2/pointup.webp)           |
+| `bank`         | ![bank](src/main/resources/markers/set2/bank.webp)                 |     | `drink`        | ![drink](src/main/resources/markers/set2/drink.webp)               |     | `portal`       | ![portal](src/main/resources/markers/set2/portal.webp)             |
+| `basket`       | ![basket](src/main/resources/markers/set2/basket.webp)             |     | `exclamation`  | ![exclamation](src/main/resources/markers/set2/exclamation.webp)   |     | `purpleflag`   | ![purpleflag](src/main/resources/markers/set2/purpleflag.webp)     |
+| `bed`          | ![bed](src/main/resources/markers/set2/bed.webp)                   |     | `factory`      | ![factory](src/main/resources/markers/set2/factory.webp)           |     | `queen`        | ![queen](src/main/resources/markers/set2/queen.webp)               |
+| `beer`         | ![beer](src/main/resources/markers/set2/beer.webp)                 |     | `fire`         | ![fire](src/main/resources/markers/set2/fire.webp)                 |     | `redflag`      | ![redflag](src/main/resources/markers/set2/redflag.webp)           |
+| `bighouse`     | ![bighouse](src/main/resources/markers/set2/bighouse.webp)         |     | `flower`       | ![flower](src/main/resources/markers/set2/flower.webp)             |     | `right`        | ![right](src/main/resources/markers/set2/right.webp)               |
+| `blueflag`     | ![blueflag](src/main/resources/markers/set2/blueflag.webp)         |     | `gear`         | ![gear](src/main/resources/markers/set2/gear.webp)                 |     | `ruby`         | ![ruby](src/main/resources/markers/set2/ruby.webp)                 |
+| `bomb`         | ![bomb](src/main/resources/markers/set2/bomb.webp)                 |     | `goldmedal`    | ![goldmedal](src/main/resources/markers/set2/goldmedal.webp)       |     | `scales`       | ![scales](src/main/resources/markers/set2/scales.webp)             |
+| `bookshelf`    | ![bookshelf](src/main/resources/markers/set2/bookshelf.webp)       |     | `goldstar`     | ![goldstar](src/main/resources/markers/set2/goldstar.webp)         |     | `shield`       | ![shield](src/main/resources/markers/set2/shield.webp)             |
+| `bricks`       | ![bricks](src/main/resources/markers/set2/bricks.webp)             |     | `greenflag`    | ![greenflag](src/main/resources/markers/set2/greenflag.webp)       |     | `sign`         | ![sign](src/main/resources/markers/set2/sign.webp)                 |
+| `bronzemedal`  | ![bronzemedal](src/main/resources/markers/set2/bronzemedal.webp)   |     | `hammer`       | ![hammer](src/main/resources/markers/set2/hammer.webp)             |     | `silvermedal`  | ![silvermedal](src/main/resources/markers/set2/silvermedal.webp)   |
+| `bronzestar`   | ![bronzestar](src/main/resources/markers/set2/bronzestar.webp)     |     | `heart`        | ![heart](src/main/resources/markers/set2/heart.webp)               |     | `silverstar`   | ![silverstar](src/main/resources/markers/set2/silverstar.webp)     |
+| `building`     | ![building](src/main/resources/markers/set2/building.webp)         |     | `house`        | ![house](src/main/resources/markers/set2/house.webp)               |     | `skull`        | ![skull](src/main/resources/markers/set2/skull.webp)               |
+| `cake`         | ![cake](src/main/resources/markers/set2/cake.webp)                 |     | `key`          | ![key](src/main/resources/markers/set2/key.webp)                   |     | `star`         | ![star](src/main/resources/markers/set2/star.webp)                 |
+| `camera`       | ![camera](src/main/resources/markers/set2/camera.webp)             |     | `king`         | ![king](src/main/resources/markers/set2/king.webp)                 |     | `sun`          | ![sun](src/main/resources/markers/set2/sun.webp)                   |
+| `cart`         | ![cart](src/main/resources/markers/set2/cart.webp)                 |     | `left`         | ![left](src/main/resources/markers/set2/left.webp)                 |     | `temple`       | ![temple](src/main/resources/markers/set2/temple.webp)             |
+| `caution`      | ![caution](src/main/resources/markers/set2/caution.webp)           |     | `lightbulb`    | ![lightbulb](src/main/resources/markers/set2/lightbulb.webp)       |     | `theater`      | ![theater](src/main/resources/markers/set2/theater.webp)           |
+| `chest`        | ![chest](src/main/resources/markers/set2/chest.webp)               |     | `lighthouse`   | ![lighthouse](src/main/resources/markers/set2/lighthouse.webp)     |     | `tornado`      | ![tornado](src/main/resources/markers/set2/tornado.webp)           |
+| `church`       | ![church](src/main/resources/markers/set2/church.webp)             |     | `lock`         | ![lock](src/main/resources/markers/set2/lock.webp)                 |     | `tower`        | ![tower](src/main/resources/markers/set2/tower.webp)               |
+| `coins`        | ![coins](src/main/resources/markers/set2/coins.webp)               |     | `map`          | ![map](src/main/resources/markers/set2/map.webp)                   |     | `tree`         | ![tree](src/main/resources/markers/set2/tree.webp)                 |
+| `comment`      | ![comment](src/main/resources/markers/set2/comment.webp)           |     | `minecart`     | ![minecart](src/main/resources/markers/set2/minecart.webp)         |     | `truck`        | ![truck](src/main/resources/markers/set2/truck.webp)               |
+| `compass`      | ![compass](src/main/resources/markers/set2/compass.webp)           |     | `offlineuser`  | ![offlineuser](src/main/resources/markers/set2/offlineuser.webp)   |     | `up`           | ![up](src/main/resources/markers/set2/up.webp)                     |
+| `construction` | ![construction](src/main/resources/markers/set2/construction.webp) |     | `orangeflag`   | ![orangeflag](src/main/resources/markers/set2/orangeflag.webp)     |     | `walk`         | ![walk](src/main/resources/markers/set2/walk.webp)                 |
+| `cross`        | ![cross](src/main/resources/markers/set2/cross.webp)               |     | `papaj`        | ![papaj](src/main/resources/markers/set2/papaj.webp)               |     | `warning`      | ![warning](src/main/resources/markers/set2/warning.webp)           |
+| `cup`          | ![cup](src/main/resources/markers/set2/cup.webp)                   |     | `pinkflag`     | ![pinkflag](src/main/resources/markers/set2/pinkflag.webp)         |     | `world`        | ![world](src/main/resources/markers/set2/world.webp)               |
+| `cutlery`      | ![cutlery](src/main/resources/markers/set2/cutlery.webp)           |     | `pirateflag`   | ![pirateflag](src/main/resources/markers/set2/pirateflag.webp)     |     | `wrench`       | ![wrench](src/main/resources/markers/set2/wrench.webp)             |
+| `diamond`      | ![diamond](src/main/resources/markers/set2/diamond.webp)           |     | `pointdown`    | ![pointdown](src/main/resources/markers/set2/pointdown.webp)       |     | `yellowflag`   | ![yellowflag](src/main/resources/markers/set2/yellowflag.webp)     |
+| `dog`          | ![dog](src/main/resources/markers/set2/dog.webp)                   |     | `pointleft`    | ![pointleft](src/main/resources/markers/set2/pointleft.webp)       |     |                |                                                                    |
+| `door`         | ![door](src/main/resources/markers/set2/door.webp)                 |     | `pointright`   | ![pointright](src/main/resources/markers/set2/pointright.webp)     |     |                |                                                                    |
+
+`ban_white` is the fallback when a sign names an icon that cannot be resolved.
+
+The set 1 icons come from the vanilla Minecraft map icons and the
+[Map Icons Resource Pack](https://modrinth.com/resourcepack/map-icons), used under its MIT licence.
+<br/>
+The set 2 icons are modified versions of the original [Dynmap](https://github.com/webbukkit/dynmap)
+assets, used under the Apache 2.0 licence.
