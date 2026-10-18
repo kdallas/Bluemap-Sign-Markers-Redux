@@ -54,19 +54,66 @@ Place any sign in the game. Fill the sign as follows:
 
 ### Icon resolution
 
-Icons live directly in `/bluemap/web/markers/` - no subfolders. Both PNG and SVG work.
+Icons live in `/bluemap/web/markers/`. They may sit directly in that folder or in one level of
+sub-folder (`web/markers/set05/`). PNG, SVG and WebP all work. The bundled sets use the same
+lookup as your own icons: the plugin copies them into `web/markers/set1/` and `set2/` on start,
+and an existing file is never overwritten.
 
-- `[portal]` uses `portal.svg` if it exists, otherwise `portal.png`.
-- `[portal.svg]` uses that exact file. An explicit name always wins, so `[portal.png]` picks the
-  PNG even when an SVG of the same name is present.
-- If neither exists, the bundled `ban_white` icon is used.
+Lookup order:
+
+1. **Format** - `.svg`, then `.webp`, then `.png`. Format outranks folder, so a `portal.svg` in
+   `set2/` beats a `portal.png` in the root.
+2. **Folder** - the `markers/` root first, then its sub-folders in case-insensitive natural
+   order (`set1`, `set2`, ..., `set10`), stopping at the first file hit.
+
+So within one folder `[portal]` uses `portal.svg` if present, then `portal.webp`, then
+`portal.png`; two files of the same format are settled by folder.
+
+- `[portal.svg]` uses that exact file. An explicit name always wins over the format order, so
+  `[portal.png]` picks the PNG even when an SVG of the same name is present.
+- `[portal]` still matches a file whose own name contains a dot (`my.icon.png` for `[my.icon]`)
+  after the extension probes, as it did before SVG support.
+- If nothing matches, the bundled `ban_white` icon is used.
 - The token is case-insensitive, but the file name must be lower-case on case-sensitive
   filesystems.
+
+Format is compared before folder, so an icon in `web/markers/` only wins over a bundled file of
+the *same* format: a root `portal.png` does not shadow a bundled `portal.webp`. To replace a
+bundled icon outright, put the same format in the root, or use an SVG or WebP there.
 
 An SVG should carry explicit `width` and `height` attributes; those are used exactly as written.
 A `viewBox` is only consulted when neither is available, and is scaled down so its longest edge is
 at most 50px - viewBox numbers are usually far larger than an icon renders, so they are not used
-as pixel sizes directly.
+as pixel sizes directly. PNG and WebP sizes are read from their headers, so their anchors are the
+icon's centre.
+
+### Adding your own icon set
+
+Create a folder inside `/bluemap/web/markers/` and put icons in it - no registration, restart or
+configuration needed:
+
+```text
+web/markers/custom1/portal.webp
+web/markers/custom1/harbour.svg
+```
+
+`[portal]` and `[harbour]` then resolve from `custom1/`. A few consequences of the lookup order
+above:
+
+- Only direct sub-folders of `markers/` are searched; `custom1/deep/icon.png` is not found.
+- A folder's name is its position in the tie-break. `custom1` sorts before `set1`, so it wins
+  same-format ties against the bundled sets. A name that sorts after them (e.g. `zcustom`) only
+  wins ties where no bundled folder holds that icon.
+- To override one bundled icon rather than a whole set, either put the file directly in
+  `web/markers/` in the same format, or use a higher-priority format anywhere (`portal.svg` beats
+  `portal.webp`, which beats `portal.png`).
+- The plugin only copies its own `set1`/`set2` into `web/markers/` and never overwrites an
+  existing file, so your folders are safe. Delete a bundled `setN/` folder to have it recreated
+  from the jar on the next start.
+
+Icons are resolved when a sign is placed, so a newly added file is used by the next sign without
+any reload. For an existing marker, `/signmarkers regenerate <id or label>` re-reads its sign and
+resolves the icon again.
 
 ## Commands
 
@@ -140,26 +187,30 @@ hundreds.
 These are the names that are available automatically for the markers, plus the corresponding icons. Just use any of the values between brackets - `[` and `]`, e.g. `[portal]` - to place the marker on the **BlueMap**.
 It does not matter if you use lowercase or uppercase; the plugin will handle it.
 
+The table below lists `set1/`. A second bundled set, `set2/`, adds icons such as `bank`, `bed`,
+`cart`, `chest`, `compass`, the coloured `*flag` icons, and the `gold`/`silver`/`bronze` medal
+and star icons.
+
 | Name             | Icon                                                                    |     | Name              | Icon                                                                     |
 | ---------------- | ----------------------------------------------------------------------- | --- | ----------------- | ------------------------------------------------------------------------ |
-| `ban_black`      | ![ban_black](src/main/resources/markers/icons/ban_black.png)            |     | `mansion`         | ![mansion](src/main/resources/markers/icons/mansion.png)                 |
-| `ban_blue`       | ![ban_blue](src/main/resources/markers/icons/ban_blue.png)              |     | `mineshaft`       | ![mineshaft](src/main/resources/markers/icons/mineshaft.png)             |
-| `ban_brown`      | ![ban_brown](src/main/resources/markers/icons/ban_brown.png)            |     | `monument`        | ![monument](src/main/resources/markers/icons/monument.png)               |
-| `ban_cyan`       | ![ban_cyan](src/main/resources/markers/icons/ban_cyan.png)              |     | `ocean_ruins`     | ![ocean_ruins](src/main/resources/markers/icons/ocean_ruins.png)         |
-| `ban_gray`       | ![ban_gray](src/main/resources/markers/icons/ban_gray.png)              |     | `pickaxe`         | ![pickaxe](src/main/resources/markers/icons/pickaxe.png)                 |
-| `ban_green`      | ![ban_green](src/main/resources/markers/icons/ban_green.png)            |     | `portal`          | ![portal](src/main/resources/markers/icons/portal.png)                   |
-| `ban_light_blue` | ![ban_light_blue](src/main/resources/markers/icons/ban_light_blue.png)  |     | `spawner`         | ![spawner](src/main/resources/markers/icons/spawner.png)                 |
-| `ban_light_gray` | ![ban_light_gray](src/main/resources/markers/icons/ban_light_gray.png)  |     | `target_point`    | ![target_point](src/main/resources/markers/icons/target_point.png)       |
-| `ban_lime`       | ![ban_lime](src/main/resources/markers/icons/ban_lime.png)              |     | `target_x`        | ![target_x](src/main/resources/markers/icons/target_x.png)               |
-| `ban_magenta`    | ![ban_magenta](src/main/resources/markers/icons/ban_magenta.png)        |     | `treasure_x`      | ![treasure_x](src/main/resources/markers/icons/treasure_x.png)           |
-| `ban_orange`     | ![ban_orange](src/main/resources/markers/icons/ban_orange.png)          |     | `tree`            | ![tree](src/main/resources/markers/icons/tree.png)                       |
-| `ban_pink`       | ![ban_pink](src/main/resources/markers/icons/ban_pink.png)              |     | `trial`           | ![trial](src/main/resources/markers/icons/trial.png)                     |
-| `ban_purple`     | ![ban_purple](src/main/resources/markers/icons/ban_purple.png)          |     | `village_desert`  | ![village_desert](src/main/resources/markers/icons/village_desert.png)   |
-| `ban_red`        | ![ban_red](src/main/resources/markers/icons/ban_red.png)                |     | `village_plains`  | ![village_plains](src/main/resources/markers/icons/village_plains.png)   |
-| `ban_white`      | ![ban_white](src/main/resources/markers/icons/ban_white.png)            |     | `village_savanna` | ![village_savanna](src/main/resources/markers/icons/village_savanna.png) |
-| `ban_yellow`     | ![ban_yellow](src/main/resources/markers/icons/ban_yellow.png)          |     | `village_snow`    | ![village_snow](src/main/resources/markers/icons/village_snow.png)       |
-| `camp`           | ![camp](src/main/resources/markers/icons/camp.png)                      |     | `village_taiga`   | ![village_taiga](src/main/resources/markers/icons/village_taiga.png)     |
-| `desert_temple`  | ![desert_temple](src/main/resources/markers/icons/desert_temple.png)    |     | `witch_hut`       | ![witch_hut](src/main/resources/markers/icons/witch_hut.png)             | 
+| `ban_black`      | ![ban_black](src/main/resources/markers/set1/ban_black.webp)            |     | `mansion`         | ![mansion](src/main/resources/markers/set1/mansion.webp)                 |
+| `ban_blue`       | ![ban_blue](src/main/resources/markers/set1/ban_blue.webp)              |     | `mineshaft`       | ![mineshaft](src/main/resources/markers/set1/mineshaft.webp)             |
+| `ban_brown`      | ![ban_brown](src/main/resources/markers/set1/ban_brown.webp)            |     | `monument`        | ![monument](src/main/resources/markers/set1/monument.webp)               |
+| `ban_cyan`       | ![ban_cyan](src/main/resources/markers/set1/ban_cyan.webp)              |     | `ocean_ruins`     | ![ocean_ruins](src/main/resources/markers/set1/ocean_ruins.webp)         |
+| `ban_gray`       | ![ban_gray](src/main/resources/markers/set1/ban_gray.webp)              |     | `pickaxe`         | ![pickaxe](src/main/resources/markers/set1/pickaxe.webp)                 |
+| `ban_green`      | ![ban_green](src/main/resources/markers/set1/ban_green.webp)            |     | `portal`          | ![portal](src/main/resources/markers/set1/portal.webp)                   |
+| `ban_light_blue` | ![ban_light_blue](src/main/resources/markers/set1/ban_light_blue.webp)  |     | `spawner`         | ![spawner](src/main/resources/markers/set1/spawner.webp)                 |
+| `ban_light_gray` | ![ban_light_gray](src/main/resources/markers/set1/ban_light_gray.webp)  |     | `target_point`    | ![target_point](src/main/resources/markers/set1/target_point.webp)       |
+| `ban_lime`       | ![ban_lime](src/main/resources/markers/set1/ban_lime.webp)              |     | `target_x`        | ![target_x](src/main/resources/markers/set1/target_x.webp)               |
+| `ban_magenta`    | ![ban_magenta](src/main/resources/markers/set1/ban_magenta.webp)        |     | `treasure_x`      | ![treasure_x](src/main/resources/markers/set1/treasure_x.webp)           |
+| `ban_orange`     | ![ban_orange](src/main/resources/markers/set1/ban_orange.webp)          |     | `tree`            | ![tree](src/main/resources/markers/set1/tree.webp)                       |
+| `ban_pink`       | ![ban_pink](src/main/resources/markers/set1/ban_pink.webp)              |     | `trial`           | ![trial](src/main/resources/markers/set1/trial.webp)                     |
+| `ban_purple`     | ![ban_purple](src/main/resources/markers/set1/ban_purple.webp)          |     | `village_desert`  | ![village_desert](src/main/resources/markers/set1/village_desert.webp)   |
+| `ban_red`        | ![ban_red](src/main/resources/markers/set1/ban_red.webp)                |     | `village_plains`  | ![village_plains](src/main/resources/markers/set1/village_plains.webp)   |
+| `ban_white`      | ![ban_white](src/main/resources/markers/set1/ban_white.webp)            |     | `village_savanna` | ![village_savanna](src/main/resources/markers/set1/village_savanna.webp) |
+| `ban_yellow`     | ![ban_yellow](src/main/resources/markers/set1/ban_yellow.webp)          |     | `village_snow`    | ![village_snow](src/main/resources/markers/set1/village_snow.webp)       |
+| `camp`           | ![camp](src/main/resources/markers/set1/camp.webp)                      |     | `village_taiga`   | ![village_taiga](src/main/resources/markers/set1/village_taiga.webp)     |
+| `desert_temple`  | ![desert_temple](src/main/resources/markers/set1/desert_temple.webp)    |     | `witch_hut`       | ![witch_hut](src/main/resources/markers/set1/witch_hut.webp)             | 
 
 
 Where these images are from the vanilla Minecraft map icons, or the [Map Icons Resource Pack](https://modrinth.com/resourcepack/map-icons).

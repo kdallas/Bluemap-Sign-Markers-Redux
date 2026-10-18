@@ -30,11 +30,12 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !gradle/wrapper/gradle-wrapper.properties
 
-### Systemowe / Inne ###
+### System / Temporary
 .DS_Store
 thumbs.db
 log/
 *.log
+*-bak*
 temp/
 
 bin/
