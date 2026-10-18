@@ -63,6 +63,12 @@ public class Constants {
     public final static String ADDED_TEMPLATE = "Marker <%s> successfully added at %d %d %d";
 
     /**
+     * Template message shown when an existing marker is replaced. Format args: s (string),
+     * x, y, z (integers).
+     */
+    public final static String UPDATED_TEMPLATE = "Marker <%s> successfully updated at %d %d %d";
+
+    /**
     * Placeholder text used in marker labels to indicate where the marker text goes.
      */
     public final static String MARKER_PLACEHOLDER = "> map marker <";

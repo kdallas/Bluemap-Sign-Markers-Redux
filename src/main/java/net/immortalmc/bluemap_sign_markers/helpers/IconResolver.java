@@ -58,8 +58,13 @@ import static net.immortalmc.bluemap_sign_markers.Constants.IMAGE_PATH;
  */
 public final class IconResolver {
 
-    /** Icon used when the requested one cannot be resolved. Ships with the plugin. */
-    private static final String FALLBACK_NAME = "ban_white";
+    /**
+     * Icon used when the requested one cannot be resolved. Ships with the plugin.
+     * <p>
+     * Public so callers that report the result to a player can recognise the fallback without
+     * repeating the name.
+     */
+    public static final String FALLBACK_NAME = "ban_white";
 
     private static final String SVG_EXTENSION = ".svg";
     private static final String WEBP_EXTENSION = ".webp";

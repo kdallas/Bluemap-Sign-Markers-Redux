@@ -6,6 +6,8 @@ import net.immortalmc.bluemap_sign_markers.command.SignMarkersCommand;
 import net.immortalmc.bluemap_sign_markers.helpers.DetailTemplate;
 import net.immortalmc.bluemap_sign_markers.helpers.IconHelper;
 import net.immortalmc.bluemap_sign_markers.helpers.MarkerHelper;
+import net.immortalmc.bluemap_sign_markers.helpers.MarkerService;
+import net.immortalmc.bluemap_sign_markers.watcher.BookSignListener;
 import net.immortalmc.bluemap_sign_markers.watcher.SignWatcher;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -43,15 +45,15 @@ public class SignMarkers extends JavaPlugin implements FeatureProvider {
     private MarkerHelper markerHelper;
 
     /**
-     * Whether the {@link SignWatcher} listener has been registered.
+     * Whether the {@link SignWatcher} and {@link BookSignListener} listeners have been registered.
      * <p>
      * BlueMap re-fires its {@code onEnable} consumers every time it is reloaded, so
      * registering unconditionally would add another listener per reload. Bukkit dispatches
      * each sign event to every registered listener, so the player feedback would repeat
-     * once per accumulated reload. The listener itself survives a BlueMap reload, so it
-     * only ever needs registering once.
+     * once per accumulated reload. The listeners themselves survive a BlueMap reload, so they
+     * only ever need registering once.
      */
-    private boolean signWatcherRegistered = false;
+    private boolean signListenersRegistered = false;
 
     /**
      * Concurrent map associating each loaded Bukkit {@link World} with its BlueMap {@link MarkerSet}.
@@ -67,7 +69,7 @@ public class SignMarkers extends JavaPlugin implements FeatureProvider {
      *     <li>creates data files for each world;</li>
      *     <li>loads existing marker sets and registers them with BlueMap;</li>
      *     <li>copies marker icons from the plugin JAR into BlueMap's webroot;</li>
-     *     <li>registers the sign watcher (SignWatcher).</li>
+     *     <li>registers the sign and book input listeners.</li>
      * </ul>
      * I/O errors are handled locally and logged as warnings.
      */
@@ -78,14 +80,16 @@ public class SignMarkers extends JavaPlugin implements FeatureProvider {
         // Seeded before anything can render a popup, and never overwritten afterwards.
         DetailTemplate.ensureTemplateFile(getDataFolder().toPath(), logger);
         registerCommands();
+        final MarkerService markerService = new MarkerService(this);
         BlueMapAPI.onEnable(api -> {
                     try {
                         JarFile jar = new JarFile(this.getFile());
                         webRoot = api.getWebApp().getWebRoot();
                         boolean result = IconHelper.copyMarkers(jar, webRoot, logger);
-                        if (!signWatcherRegistered) {
-                            Bukkit.getPluginManager().registerEvents(new SignWatcher(this), this);
-                            signWatcherRegistered = true;
+                        if (!signListenersRegistered) {
+                            Bukkit.getPluginManager().registerEvents(new SignWatcher(markerService), this);
+                            Bukkit.getPluginManager().registerEvents(new BookSignListener(markerService), this);
+                            signListenersRegistered = true;
                         }
                         logger.info("Plugin init status: " + (result ? "ok!" : "failed!"));
                     } catch (IOException e) {
