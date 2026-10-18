@@ -3,6 +3,8 @@
 
 This plugin is a fork of [IMMC BlueMap Sign Markers](https://github.com/IMMC-dev/Bluemap-Sign-Markers) which forked [Easy BlueMap Sign Markers](https://github.com/deimiczny/easy-bmapmarkers), which itself is a fork of [BlueMapSignMarkers](https://modrinth.com/plugin/bluemapsignmarkers) 
 
+![logo](Icon_EasyBMSignMarkers.png)
+
 ### Changes in this fork
 
 - **Renamed to `SignMarkersRedux`**, including the in-game chat prefix. Upstream called the
@@ -51,6 +53,29 @@ Place any sign in the game. Fill the sign as follows:
 - **2nd line:** text
 - **3rd line:** text
 - **4th line:** text
+
+### Using a book for long lines
+
+A sign board only shows about 15 characters per line, which makes a token such as
+`[custom1/construction.webp]` easy to mistype. A book works as a wider input surface:
+
+1. Write the marker's four lines on the first page of a book and quill (or a written book).
+   Line 1 is the icon token in square brackets, e.g. `[set2/tree]`; lines 2-4 are the label text.
+2. Hold the book in your main hand and right-click the sign.
+
+The plugin copies the first four lines onto the sign and creates or updates the marker. Only the
+first page is used, and the book is not consumed. Anything after the fourth line is ignored, and
+each line is cut at 50 characters; both cases produce a chat warning. Waxed signs are refused, and
+the plugin only acts if no other plugin has cancelled the interaction. No extra permission is
+required - this is no more privileged than writing the sign by hand. The sign's front side is
+written; clicking the back still applies the book to the front.
+
+A book and quill stays editable, so the book doubles as a reusable template: reopen it, change any
+line, and right-click the sign again to replace the marker. The same book can be applied to several
+signs.
+
+The sign board still clips lines that are too wide - the marker label and popup use the full text
+stored on the sign.
 
 ### Icon resolution
 
@@ -125,20 +150,32 @@ The example below creates a marker on your map with the `star` icon assigned.
 
 First, you build the sign
 
-![sign1](example1.png)
+![sign1](example1.webp)
 
 After you complete it, the first line will switch to `> map marker <`. This indicates that placing
 the marker was successful.
 
-![sign2](example2.png)
+![sign2](example2.webp)
 
 After a while, you will see the marker on your BlueMap
 
-![sign3](example3.png)
+![sign3](example3.webp)
 
 And when you click it, the popup containing your sign description will appear
 
-![sign4](example4.png)
+![sign4](example4.webp)
+
+### Using a book
+
+The same four lines can be written in a book and applied to a sign instead. Write them on the first
+page of a book and quill, with the icon token still in square brackets on line 1:
+
+![editing the book](example5.webp)
+
+Hold the book in your main hand and right-click the sign. The plugin copies the lines onto the sign
+and creates or replaces its marker:
+
+![sign after applying the book](example6.webp)
 
 ## Commands
 
