@@ -3,7 +3,7 @@
 
 This plugin is a fork of [IMMC BlueMap Sign Markers](https://github.com/IMMC-dev/Bluemap-Sign-Markers) which forked [Easy BlueMap Sign Markers](https://github.com/deimiczny/easy-bmapmarkers), which itself is a fork of [BlueMapSignMarkers](https://modrinth.com/plugin/bluemapsignmarkers) 
 
-![logo](Icon_EasyBMSignMarkers.png)
+![logo](logo.png)
 
 ### Changes in this fork
 
